@@ -1,0 +1,16 @@
+{
+  "files.watcherExclude": {
+    "**/target/**": true,
+    "**/node_modules/**": true,
+    "**/dist/**": true
+  },
+  "files.exclude": {
+    "**/target": false
+  },
+  "search.exclude": {
+    "**/target": true
+  },
+  "java.import.exclusions": [
+    "**/target/**"
+  ]
+}

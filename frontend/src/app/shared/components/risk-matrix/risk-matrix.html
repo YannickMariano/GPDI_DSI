@@ -1,0 +1,34 @@
+<div class="risk-matrix__grid" role="table" aria-label="Matrice probabilité et impact des risques">
+  <div class="risk-matrix__axis-label risk-matrix__axis-label--y" aria-hidden="true">Probabilité</div>
+  <div class="risk-matrix__rows">
+    @for (probabilite of niveaux; track probabilite) {
+      <div class="risk-matrix__row" role="row">
+        <span class="risk-matrix__tick" aria-hidden="true">{{ probabilite }}</span>
+        @for (impact of [1, 2, 3, 4, 5]; track impact) {
+          <div
+            class="risk-matrix__cell"
+            role="cell"
+            [style.background]="cellFor()(probabilite, impact).style.bg"
+            [style.color]="cellFor()(probabilite, impact).style.text"
+          >
+            {{ cellFor()(probabilite, impact).codes }}
+          </div>
+        }
+      </div>
+    }
+    <div class="risk-matrix__ticks-x" aria-hidden="true">
+      <span></span>
+      @for (impact of [1, 2, 3, 4, 5]; track impact) {
+        <span>{{ impact }}</span>
+      }
+    </div>
+    <div class="risk-matrix__axis-label risk-matrix__axis-label--x" aria-hidden="true">Impact</div>
+  </div>
+</div>
+
+<div class="risk-matrix__legend">
+  <span class="risk-matrix__legend-item"><span class="risk-matrix__legend-dot" [style.background]="criticiteStyle['critique'].text"></span>Critique {{ synthese().critique }}</span>
+  <span class="risk-matrix__legend-item"><span class="risk-matrix__legend-dot" [style.background]="criticiteStyle['eleve'].text"></span>Élevé {{ synthese().eleve }}</span>
+  <span class="risk-matrix__legend-item"><span class="risk-matrix__legend-dot" [style.background]="criticiteStyle['modere'].text"></span>Modéré {{ synthese().modere }}</span>
+  <span class="risk-matrix__legend-item"><span class="risk-matrix__legend-dot" [style.background]="criticiteStyle['faible'].text"></span>Faible {{ synthese().faible }}</span>
+</div>

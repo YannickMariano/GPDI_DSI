@@ -1,0 +1,89 @@
+.workspace {
+  display: flex;
+  flex-direction: column;
+}
+
+.workspace__header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 22px 0;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.workspace__title-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-wrap: wrap;
+}
+
+.workspace__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.workspace__status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--status-en-cours-bg);
+  color: var(--status-en-cours-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.workspace__sante-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.workspace__code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text-quaternary);
+}
+
+.workspace__meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.workspace__progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workspace__progress app-progress-bar {
+  display: inline-block;
+  width: 90px;
+}
+
+.workspace__progress strong {
+  font-family: var(--font-mono);
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
+.workspace__content {
+  padding: 20px 22px;
+}
+
+.workspace__not-found {
+  padding: 40px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+}

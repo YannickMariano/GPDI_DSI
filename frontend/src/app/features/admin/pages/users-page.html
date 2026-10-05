@@ -1,0 +1,168 @@
+<div class="users-page">
+  <header class="users-page__header">
+    <div>
+      <h1>Comptes utilisateurs</h1>
+      <span class="users-page__meta">{{ activeCount() }} actifs · {{ suspendedCount() }} suspendus</span>
+    </div>
+    <button type="button" class="users-page__create-btn" (click)="ouvrirCreationCompte()">+ Créer un compte</button>
+  </header>
+
+  <div class="users-page__filters">
+    <app-search-bar placeholder="Nom, matricule ou courriel…" [(value)]="search" />
+    <span class="field__label" id="uFiltreRoleLabel">Rôle</span>
+    <app-dropdown-menu [items]="roleFiltreItems" [label]="roleFiltreLabel()" (select)="selectRoleFiltre($event)" />
+    <span class="field__label" id="uFiltreStatutLabel">État du compte</span>
+    <app-dropdown-menu [items]="statutFiltreItems" [label]="statutFiltreLabel()" (select)="selectStatutFiltre($event)" />
+  </div>
+
+  <div class="users-page__list">
+    <div class="users-page__list-header">
+      <span>Liste des comptes existants</span>
+      <span class="users-page__result-count">{{ filteredPeople().length }} compte(s)</span>
+    </div>
+
+    <div class="user-table" role="table">
+      <div class="user-table__row user-table__row--head" role="row">
+        <span role="columnheader">Agent</span>
+        <span role="columnheader">Matricule</span>
+        <span role="columnheader">Rôle unique</span>
+        <span role="columnheader">Spécialité</span>
+        <span role="columnheader">Compte</span>
+        <span role="columnheader">Action</span>
+      </div>
+      @for (p of filteredPeople(); track p.id) {
+        <div class="user-table__row" role="row">
+          <span class="user-table__agent" role="cell">
+            <app-avatar [initiales]="p.initiales" [bg]="p.avatarBg" [nom]="p.nom" [size]="32" />
+            <span>
+              <strong>{{ p.nom }}</strong>
+              <span class="user-table__email">{{ p.email }}</span>
+            </span>
+          </span>
+          <span class="user-table__matricule" role="cell">{{ p.matricule }}</span>
+          <span role="cell">
+            <span class="user-table__role-pill" [style.background]="roleStyle[p.role].bg" [style.color]="roleStyle[p.role].color">
+              {{ roleLabels[p.role] }}
+            </span>
+          </span>
+          <span class="user-table__team" role="cell">{{ p.direction }}</span>
+          <span role="cell">
+            <button type="button" class="user-table__status" (click)="toggleStatut(p.id, p.statut)">
+              <span class="user-table__status-dot" [class.user-table__status-dot--suspendu]="p.statut === 'suspendu'"></span>
+              {{ p.statut === 'actif' ? 'Actif' : 'Suspendu' }}
+            </button>
+          </span>
+          <span class="user-table__actions" role="cell">
+            <button type="button" class="user-table__link" (click)="ouvrirModification(p)">Modifier</button>
+            <button type="button" class="user-table__link user-table__link--danger" (click)="demanderSuppression(p)">Supprimer</button>
+          </span>
+        </div>
+      } @empty {
+        <div class="user-table__empty">Aucun compte ne correspond à ces filtres.</div>
+      }
+    </div>
+  </div>
+
+  <app-modal [open]="modalOuvert()" [width]="480" [ariaLabel]="modeEdition() ? 'Modifier un compte utilisateur' : 'Créer un compte utilisateur'" (close)="fermerCreationCompte()">
+    <form class="form-modal" [formGroup]="form" (ngSubmit)="enregistrerCompte()" novalidate>
+      <div class="form-modal__header">
+        <h2>{{ modeEdition() ? 'Modifier le compte utilisateur' : 'Créer un compte utilisateur' }}</h2>
+        <button type="button" class="form-modal__close" (click)="fermerCreationCompte()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        <div class="form-modal__row">
+          <div class="field">
+            <label class="field__label" for="uPrenom">Prénom</label>
+            <input id="uPrenom" type="text" class="input" formControlName="prenom" [class.input--invalid]="form.controls.prenom.invalid && form.controls.prenom.touched" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="uNom">Nom</label>
+            <input id="uNom" type="text" class="input" formControlName="nom" [class.input--invalid]="form.controls.nom.invalid && form.controls.nom.touched" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="uMatricule">Matricule</label>
+          <input id="uMatricule" type="text" class="input" formControlName="matricule" [class.input--invalid]="form.controls.matricule.invalid && form.controls.matricule.touched" />
+          <span class="field__hint">Vérifié auprès du fichier du personnel.</span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="uEmail">Adresse électronique professionnelle</label>
+          <input id="uEmail" type="email" class="input" formControlName="email" [class.input--invalid]="form.controls.email.invalid && form.controls.email.touched" />
+          @if (form.controls.email.invalid && form.controls.email.touched) {
+            <span class="field__error">Une adresse électronique valide est requise.</span>
+          } @else {
+            <span class="field__hint">Le domaine mef.gov est imposé.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="uTelephone">Téléphone</label>
+          <input id="uTelephone" type="tel" class="input" formControlName="telephone" placeholder="+226 00 00 00 00" />
+        </div>
+
+        <div class="field">
+          <span class="field__label" id="uRoleLabel">Rôle unique</span>
+          <app-dropdown-menu [items]="roleItems()" [label]="roleLabels[form.controls.role.value]" (select)="selectRole($event)" />
+          <span class="field__hint">Un seul rôle par utilisateur, choisi parmi les rôles définis par l'administrateur.</span>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="uSpecialite">Spécialité</label>
+          <input id="uSpecialite" type="text" class="input" formControlName="specialite" placeholder="Ex. Développement back-end Java" [class.input--invalid]="form.controls.specialite.invalid && form.controls.specialite.touched" />
+          <span class="field__hint">Saisie libre par l'administrateur — sert au rapprochement des compétences et des tâches.</span>
+        </div>
+
+        @if (!modeEdition()) {
+          <div class="field">
+            <label class="field__label" for="uMotDePasse">Mot de passe initial</label>
+            <div class="users-page__password-field">
+              <input
+                id="uMotDePasse"
+                type="text"
+                class="input users-page__password-input"
+                formControlName="motDePasse"
+                placeholder="Saisir manuellement ou générer"
+                [class.input--invalid]="form.controls.motDePasse.invalid && form.controls.motDePasse.touched"
+              />
+              <button type="button" class="users-page__generate-btn" (click)="genererMotDePasse()">Générer</button>
+            </div>
+            @if (form.controls.motDePasse.invalid && form.controls.motDePasse.touched) {
+              <span class="field__error">Le mot de passe doit contenir au moins 6 caractères.</span>
+            } @else {
+              <span class="field__hint">Généré aléatoirement ou saisi manuellement, puis transmis par courriel.</span>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">Le matricule et le courriel doivent être uniques. Un agent ne peut porter qu'un seul rôle.</span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerCreationCompte()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">{{ modeEdition() ? 'Modifier' : 'Créer' }}</button>
+      </div>
+    </form>
+  </app-modal>
+
+  <app-confirmation-dialog
+    [open]="personneASupprimer() !== null"
+    title="Supprimer le compte"
+    [message]="'Supprimer le compte de « ' + (personneASupprimer()?.nom ?? '') + ' » ? Cette action est irréversible.'"
+    confirmLabel="Supprimer"
+    [destructive]="true"
+    (confirm)="confirmerSuppression()"
+    (cancel)="annulerSuppression()"
+  />
+
+  <app-confirmation-dialog
+    [open]="personneAvecTachesASupprimer() !== null"
+    title="Compte encore assigné à des tâches"
+    [message]="'« ' + (personneAvecTachesASupprimer()?.nom ?? '') + ' » est affecté à une ou plusieurs tâches et ne peut pas être supprimé tel quel. Si vous confirmez, il sera retiré de la ou des tâches où il était affecté, puis son compte sera supprimé.'"
+    confirmLabel="Retirer et supprimer"
+    [destructive]="true"
+    (confirm)="confirmerSuppressionAvecTaches()"
+    (cancel)="annulerSuppressionAvecTaches()"
+  />
+</div>

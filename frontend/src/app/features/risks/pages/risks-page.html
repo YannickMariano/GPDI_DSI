@@ -1,0 +1,18 @@
+<div class="risks-page">
+  <header class="risks-page__header">
+    <h1>Registre des risques — portefeuille</h1>
+    <p>Vue consolidée, lecture seule, des risques actifs sur l'ensemble des projets de la DSI.</p>
+  </header>
+
+  <div class="risks-page__grid">
+    <section class="risks-page__panel risks-page__panel--matrix">
+      <h2>Matrice probabilité / impact</h2>
+      <app-risk-matrix [risks]="risks()" />
+    </section>
+
+    <section class="risks-page__panel">
+      <h2>Registre</h2>
+      <app-risk-table [risks]="risks()" [people]="people()" />
+    </section>
+  </div>
+</div>

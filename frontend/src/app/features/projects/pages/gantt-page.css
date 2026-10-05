@@ -1,0 +1,207 @@
+.gantt {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gantt__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.gantt__zoom {
+  display: flex;
+  padding: 2px;
+  background: var(--color-surface-alt);
+  border-radius: var(--radius-control);
+}
+
+.gantt__zoom-btn {
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 5px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.gantt__zoom-btn--active {
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.gantt__toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.gantt__legend {
+  display: flex;
+  gap: 14px;
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.gantt__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gantt__legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.gantt__legend-diamond {
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+  background: var(--color-ai);
+}
+
+.gantt__chart {
+  min-width: 900px;
+  overflow-x: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gantt__header-row,
+.gantt__row {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.gantt__label-col {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  padding: 6px 4px;
+}
+
+.gantt__label-col--phase {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.gantt__timeline {
+  display: flex;
+  position: relative;
+  height: 30px;
+}
+
+.gantt__timeline--relative {
+  background: var(--color-surface-alt);
+  border-radius: 4px;
+}
+
+.gantt__month {
+  flex: 1;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.gantt__row--milestones .gantt__timeline {
+  background: transparent;
+  height: 24px;
+}
+
+.gantt__today {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--color-error);
+  opacity: 0.6;
+  z-index: 2;
+}
+
+.gantt__milestone {
+  position: absolute;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transform: translateX(-50%);
+}
+
+.gantt__milestone-diamond {
+  width: 8px;
+  height: 8px;
+  transform: rotate(45deg);
+  flex: 0 0 auto;
+}
+
+.gantt__milestone-label {
+  font-size: 10.5px;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.gantt__dependency {
+  position: absolute;
+  top: 50%;
+  height: 0;
+  border-top: 1.5px dashed var(--color-text-quaternary);
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.gantt__dependency::after {
+  content: '▸';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translate(0, -50%);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--color-text-quaternary);
+}
+
+.gantt__bar-track {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  background: var(--color-action-bg);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.gantt__bar-progress {
+  height: 100%;
+  background: var(--color-action);
+}
+
+.gantt__insight {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  background: var(--color-ai-bg);
+  border-radius: var(--radius-card);
+}
+
+.gantt__insight p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #4a3a80;
+}

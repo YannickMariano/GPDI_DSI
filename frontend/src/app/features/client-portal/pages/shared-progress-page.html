@@ -1,0 +1,46 @@
+<div class="shared-progress">
+  <h1 class="shared-progress__title">Avancement partagé</h1>
+
+  <div class="shared-progress__banner">
+    <span class="shared-progress__banner-icon" aria-hidden="true">◇</span>
+    <p>
+      Cet espace est en consultation seule. Vous y voyez l'état d'avancement des projets que la Direction des
+      Systèmes d'Information vous a partagés, sans accès au détail des tâches ni à l'organisation interne des
+      équipes.
+    </p>
+  </div>
+
+  @if (projetsPartages().length === 0) {
+    <app-empty-state icon="◇" title="Aucun projet ne vous a été partagé pour le moment" description="La Direction des Systèmes d'Information partage l'avancement d'un projet dès son lancement." />
+  } @else {
+    <div class="shared-progress__grid">
+      @for (projet of projetsPartages(); track projet.id) {
+        <article class="shared-progress__card" [style.borderTopColor]="santeConfig[projet.sante].border">
+          <div class="shared-progress__card-header">
+            <span class="shared-progress__card-name">{{ projet.nom }}</span>
+            <span class="shared-progress__pill" [style.background]="santeConfig[projet.sante].bg" [style.color]="santeConfig[projet.sante].text">
+              {{ santeConfig[projet.sante].label }}
+            </span>
+          </div>
+          <div class="shared-progress__progress">
+            <div class="shared-progress__progress-row">
+              <span>Sprint {{ projet.sprintActuelIndex }} sur {{ projet.sprintTotal }}</span>
+              <span class="shared-progress__pct">{{ formatPercent(projet.avancement) }}</span>
+            </div>
+            <app-progress-bar [value]="projet.avancement" [height]="9" [ariaLabel]="'Avancement de ' + projet.nom + ' : ' + formatPercent(projet.avancement)" />
+          </div>
+          <div class="shared-progress__meta">
+            <div class="shared-progress__meta-row">
+              <span>Prochaine étape</span>
+              <span class="shared-progress__meta-value">{{ prochaineEtape(projet.id) }}</span>
+            </div>
+            <div class="shared-progress__meta-row">
+              <span>Fin prévisionnelle</span>
+              <span class="shared-progress__meta-value shared-progress__meta-value--mono">{{ formatDateFr(projet.dateFin) }}</span>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>

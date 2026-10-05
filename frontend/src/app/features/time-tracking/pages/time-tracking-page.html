@@ -1,0 +1,101 @@
+<div class="time-tracking">
+  <header class="time-tracking__header">
+    <div>
+      <h1>Saisie de temps</h1>
+      <p>Renseignez le temps réellement passé sur chacune de vos tâches.</p>
+    </div>
+    <div class="time-tracking__summary">
+      <div class="time-tracking__summary-item">
+        <span>Estimé</span>
+        <strong class="time-tracking__mono">{{ formatHours(totalEstime()) }}</strong>
+      </div>
+      <div class="time-tracking__summary-item">
+        <span>Passé</span>
+        <strong class="time-tracking__mono">{{ formatHms(totalPasse()) }}</strong>
+      </div>
+      <div class="time-tracking__summary-item">
+        <span>Écart</span>
+        <strong class="time-tracking__mono" [class]="ecartGlobalStyle()">{{ totalPasse() - totalEstime() > 0 ? '+' : '' }}{{ formatHms(totalPasse() - totalEstime()) }}</strong>
+      </div>
+    </div>
+  </header>
+
+  <div class="time-tracking__toolbar">
+    <select class="time-tracking__select" [value]="projetFiltre()" (change)="changerProjetFiltre($any($event.target).value)" aria-label="Filtrer par projet">
+      <option value="toutes">Tous les projets</option>
+      @for (projet of mesProjets(); track projet.id) {
+        <option [value]="projet.id">{{ projet.nom }}</option>
+      }
+    </select>
+
+    <select class="time-tracking__select" [value]="sprintFiltre()" (change)="changerSprintFiltre($any($event.target).value)" aria-label="Filtrer par sprint">
+      <option value="toutes">Tous les sprints</option>
+      @for (sprint of sprintsDisponibles(); track sprint.id) {
+        <option [value]="sprint.id">{{ sprint.nom }}</option>
+      }
+    </select>
+
+    <select class="time-tracking__select" [value]="statutFiltre()" (change)="changerStatutFiltre($any($event.target).value)" aria-label="Filtrer par statut">
+      <option value="toutes">Tous les statuts</option>
+      <option value="a_faire">À faire</option>
+      <option value="en_cours">En cours</option>
+      <option value="en_test">En test</option>
+      <option value="bloquee">Bloquée</option>
+      <option value="terminee">Terminée</option>
+      <option value="reportee">Reportée</option>
+    </select>
+
+    <span class="time-tracking__count">{{ mesTaches().length }} tâche(s)</span>
+  </div>
+
+  @if (mesTaches().length > 0) {
+    <div class="time-tracking__table" role="table">
+      <div class="time-tracking__row time-tracking__row--head" role="row">
+        <span role="columnheader">Tâche</span>
+        <span role="columnheader">Projet</span>
+        <span role="columnheader">Statut</span>
+        <span role="columnheader" class="time-tracking__num-col">Temps estimé</span>
+        <span role="columnheader" class="time-tracking__num-col">Temps passé</span>
+        <span role="columnheader">Avancement</span>
+        <span role="columnheader">Action</span>
+      </div>
+
+      @for (t of mesTaches(); track t.id) {
+        <div class="time-tracking__row" role="row">
+          <span class="time-tracking__task" role="cell">
+            <span class="time-tracking__mono time-tracking__code">{{ t.code }}</span>
+            <span class="time-tracking__titre">{{ t.titre }}</span>
+            @if (texteBlocage(t); as blocage) {
+              <span class="time-tracking__blocage">{{ blocage }}</span>
+            }
+          </span>
+          <span class="time-tracking__projet" role="cell">{{ projetNom(t.projectId) }}</span>
+          <span role="cell"><app-status-badge [statut]="t.statut" /></span>
+          <span class="time-tracking__num-col time-tracking__mono" role="cell">{{ formatHours(t.estimeHeures) }}</span>
+          <span class="time-tracking__num-col time-tracking__mono" role="cell">{{ formatHms(tempsPasseLive(t)) }}</span>
+          <span class="time-tracking__avancement" role="cell">
+            <app-progress-bar
+              [value]="avancementPct(t.estimeHeures, tempsPasseLive(t))"
+              [color]="avancementCouleur(t.estimeHeures, tempsPasseLive(t))"
+              [ariaLabel]="avancementPct(t.estimeHeures, tempsPasseLive(t)) + '% du temps estimé pour ' + t.titre"
+            />
+            <span class="time-tracking__avancement-text">{{ avancementPct(t.estimeHeures, tempsPasseLive(t)) }}% du temps estimé{{ t.demarreeLe ? ' · en cours' : '' }}</span>
+          </span>
+          <span role="cell">
+            <button
+              type="button"
+              class="time-tracking__action-btn"
+              [class.time-tracking__action-btn--termine]="t.statut === 'terminee'"
+              [disabled]="actionDisabled(t.statut)"
+              (click)="agirSurTache(t.id, t.statut)"
+            >
+              {{ actionLabel(t.statut) }}
+            </button>
+          </span>
+        </div>
+      }
+    </div>
+  } @else {
+    <p class="time-tracking__empty">Aucune tâche ne vous est actuellement affectée.</p>
+  }
+</div>

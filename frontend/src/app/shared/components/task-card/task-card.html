@@ -1,0 +1,33 @@
+<button type="button" class="task-card__open" (click)="open.emit(task().id)">
+  <div class="task-card__top" [class.task-card__top--with-actions]="canManage()">
+    <span class="task-card__code">{{ task().code }}</span>
+    <app-priority-badge [priorite]="task().priorite" />
+  </div>
+
+  <div class="task-card__title">{{ task().titre }}</div>
+
+  @if (tacheBloquante(); as bloquante) {
+    <div class="task-card__blocked">Bloquée par {{ bloquante.code }}</div>
+  }
+
+  @if (task().sousTaches.length > 0) {
+    <div class="task-card__subtasks">☑ {{ subTasksDoneLabel() }}</div>
+  }
+
+  <div class="task-card__footer">
+    <app-avatar-group [items]="assignes()" [size]="22" />
+    @if (task().echeance) {
+      <span class="task-card__date">{{ formatDateFr(task().echeance) }}</span>
+    }
+    @if (tempsPasseLive()) {
+      <span class="task-card__time" [class.task-card__time--actif]="task().demarreeLe">{{ formatHms(tempsPasseLive()) }}</span>
+    }
+  </div>
+</button>
+
+@if (canManage()) {
+  <div class="task-card__quick-actions">
+    <button type="button" class="task-card__icon-btn" (click)="onEdit($event)" [attr.aria-label]="'Modifier ' + task().code">✎</button>
+    <button type="button" class="task-card__icon-btn task-card__icon-btn--danger" (click)="onDelete($event)" [attr.aria-label]="'Supprimer ' + task().code">×</button>
+  </div>
+}

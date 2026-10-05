@@ -1,0 +1,130 @@
+.access-log {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.access-log__title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.access-log__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.access-log__panel-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.access-log__panel-header > span:first-child {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.access-log__hint {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+.access-log__export-btn {
+  margin-left: auto;
+  padding: 7px 13px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.access-log__export-btn:hover {
+  background: var(--color-surface-muted);
+}
+
+.access-log__table {
+  display: flex;
+  flex-direction: column;
+  overflow-x: auto;
+}
+
+.access-log__row {
+  display: grid;
+  grid-template-columns: 1.1fr 1.7fr 1.6fr 1.2fr 1fr;
+  gap: 12px;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--color-surface-alt);
+  align-items: center;
+  min-width: 720px;
+}
+
+.access-log__row:hover {
+  background: var(--color-surface-muted);
+}
+
+.access-log__row--head {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-quaternary);
+  background: var(--color-surface-muted);
+}
+
+.access-log__mono {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-text-secondary);
+}
+
+.access-log__account {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+}
+
+.access-log__account span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.access-log__resultat {
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+
+.access-log__resultat--echec {
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+}
+
+.access-log__resultat--auto {
+  background: var(--color-surface-alt);
+  color: var(--color-text-secondary);
+}

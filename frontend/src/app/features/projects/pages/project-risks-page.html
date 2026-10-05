@@ -1,0 +1,144 @@
+<div class="project-risks">
+  <section class="project-risks__panel">
+    <div class="project-risks__panel-header">
+      <span class="project-risks__panel-title">Risques détectés par l'assistant</span>
+      <div class="project-risks__filters" role="group" aria-label="Filtrer les risques par statut">
+        @for (f of filtres; track f.value) {
+          <button
+            type="button"
+            class="project-risks__filter-btn"
+            [class.project-risks__filter-btn--active]="filtreActif() === f.value"
+            (click)="changerFiltre(f.value)"
+          >
+            {{ f.label }}
+            <span class="project-risks__filter-count">{{ compteParFiltre()[f.value] }}</span>
+          </button>
+        }
+      </div>
+      <span class="project-risks__auto-pill">✦ Détection automatique — aucune déclaration manuelle</span>
+      <button type="button" class="project-risks__detect-btn" [disabled]="detectionEnCours()" (click)="detecterRisques()">
+        {{ detectionEnCours() ? 'Analyse en cours…' : 'Détecter risque' }}
+      </button>
+    </div>
+
+    @if (risquesFiltres().length > 0) {
+      <div class="risk-registry" aria-label="Registre des risques détectés">
+        <div class="risk-registry__row risk-registry__row--head">
+          <span>Risque</span>
+          <span>Criticité</span>
+          <span class="risk-registry__col-solutions">Solutions IA</span>
+        </div>
+
+        @for (risk of risquesFiltres(); track risk.id) {
+          @let criticite = criticiteRisque(risk.probabilite, risk.impact);
+          @let statut = risk.statut;
+          <div class="risk-registry__group">
+            <div class="risk-registry__row">
+              <span class="risk-registry__risk">
+                <span class="risk-registry__risk-line">
+                  <span class="risk-registry__ia-badge">✦ IA</span>
+                  <span class="risk-registry__code">{{ risk.code }}</span>
+                  <span class="risk-registry__libelle">{{ risk.libelle }}</span>
+                </span>
+                <span class="risk-registry__sub">
+                  Détecté le {{ formatDateCourteFr(risk.detection) }} · parade : {{ risk.parade }}
+                  @if (porteur(risk); as p) {
+                    · porteur : {{ p.nom }}
+                  }
+                </span>
+              </span>
+              <span>
+                <span class="risk-registry__pill" [style.background]="criticiteLabel[criticite].bg" [style.color]="criticiteLabel[criticite].text">
+                  {{ criticiteLabel[criticite].label }}
+                </span>
+              </span>
+              <span class="risk-registry__solutions-cell">
+                <button
+                  type="button"
+                  class="risk-registry__toggle-btn"
+                  [class.risk-registry__toggle-btn--active]="estOuvert(risk.id)"
+                  [disabled]="estEnRecherche(risk.id)"
+                  (click)="toggleOuverture(risk)"
+                >
+                  {{ estEnRecherche(risk.id) ? 'Recherche en cours…' : estOuvert(risk.id) ? 'Masquer' : statut === 'ouvert' ? 'Suggérer des solutions' : 'Voir les recommandations' }}
+                </button>
+                @if (statut === 'ouvert') {
+                  <button type="button" class="risk-registry__reject-btn" [disabled]="estEnRecherche(risk.id) || estEnApplication(risk.id)" (click)="rejeterAnalyse(risk)">Rejeter</button>
+                } @else {
+                  <span class="risk-registry__statut-pill" [style.background]="statutLabel[statut].bg" [style.color]="statutLabel[statut].text">
+                    {{ statutLabel[statut].label }}
+                  </span>
+                }
+              </span>
+            </div>
+
+            @if (estOuvert(risk.id)) {
+              <div class="risk-registry__panel">
+                <div class="risk-registry__panel-header">
+                  <span class="risk-registry__panel-title">{{ statut === 'ouvert' ? "Solutions proposées par l'IA" : "Recommandations de l'IA — historique" }}</span>
+                  <span class="risk-registry__panel-analyse">{{ risk.analyse }}</span>
+                </div>
+
+                @if (statut === 'ouvert') {
+                  <div class="risk-registry__solution-list">
+                    @for (solution of risk.solutions; track solution.id) {
+                      <button
+                        type="button"
+                        class="risk-registry__solution"
+                        [class.risk-registry__solution--checked]="estSolutionChoisie(risk.id, solution.id)"
+                        [attr.title]="solution.justification"
+                        (click)="toggleSolution(risk.id, solution.id)"
+                      >
+                        <span class="risk-registry__solution-check" aria-hidden="true">{{ estSolutionChoisie(risk.id, solution.id) ? '✓' : '' }}</span>
+                        <span class="risk-registry__solution-label">{{ solution.libelle }}</span>
+                        <span class="risk-registry__solution-gain">{{ solution.gain }}</span>
+                      </button>
+                    } @empty {
+                      <span class="risk-registry__panel-analyse">Aucune solution proposée par l'assistant pour ce risque.</span>
+                    }
+                  </div>
+                  <div class="risk-registry__panel-footer">
+                    <span class="risk-registry__selection-count">
+                      {{ solutionsSelectionneesCount(risk.id) > 0 ? solutionsSelectionneesCount(risk.id) + ' solution(s) sélectionnée(s)' : 'Sélectionnez les solutions à appliquer' }}
+                    </span>
+                    <button
+                      type="button"
+                      class="risk-registry__apply-btn"
+                      [disabled]="solutionsSelectionneesCount(risk.id) === 0 || estEnApplication(risk.id)"
+                      (click)="appliquerSolutions(risk)"
+                    >
+                      {{ estEnApplication(risk.id) ? 'Application en cours…' : 'Appliquer les solutions sélectionnées' }}
+                    </button>
+                  </div>
+                } @else {
+                  <div class="risk-registry__solution-list">
+                    @for (solution of risk.solutions; track solution.id) {
+                      @let issue = solutionStatutLabel[solution.statut === 'appliquee' ? 'appliquee' : 'rejetee'];
+                      <div class="risk-registry__solution risk-registry__solution--readonly" [attr.title]="solution.justification">
+                        <span class="risk-registry__solution-outcome" [style.background]="issue.bg" [style.color]="issue.text">{{ issue.label }}</span>
+                        <span class="risk-registry__solution-label">
+                          {{ solution.libelle }}
+                          @if (solution.codeTache) {
+                            <span class="risk-registry__solution-note">— tâche {{ solution.codeTache }}</span>
+                          }
+                          @if (solution.statut === 'rejetee' && solution.motifRejet) {
+                            <span class="risk-registry__solution-note">— {{ solution.motifRejet }}</span>
+                          }
+                        </span>
+                        <span class="risk-registry__solution-gain">{{ solution.gain }}</span>
+                      </div>
+                    } @empty {
+                      <span class="risk-registry__panel-analyse">Aucune recommandation enregistrée pour ce risque.</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <app-empty-state icon="✓" title="Aucun risque dans ce filtre" description="Changez de filtre pour voir d'autres risques suivis sur ce périmètre." />
+    }
+  </section>
+</div>

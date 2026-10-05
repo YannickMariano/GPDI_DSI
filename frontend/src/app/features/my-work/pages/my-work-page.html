@@ -1,0 +1,94 @@
+<div class="my-work">
+  @if (projetSelectionne(); as projet) {
+    <header class="my-work__project-header">
+      <div class="my-work__project-title-row">
+        <h1 class="my-work__project-name">{{ projet.nom }}</h1>
+        <span class="my-work__project-status-pill">
+          {{ projet.statut === 'en_cours' ? 'En cours' : projet.statut === 'en_preparation' ? 'En préparation' : projet.statut === 'suspendu' ? 'Suspendu' : projet.statut === 'archive' ? 'Archivé' : 'Clôturé' }}
+        </span>
+        @if (sante(); as s) {
+          <span class="my-work__project-sante-pill" [style.background]="s.bg" [style.color]="s.text">{{ s.label }}</span>
+        }
+        <span class="my-work__project-code">{{ projet.codeReference }}</span>
+      </div>
+      <div class="my-work__project-meta">
+        <span>{{ projet.direction }}</span>
+        <span aria-hidden="true">·</span>
+        <span>{{ sprintLabel() }}</span>
+        <span aria-hidden="true">·</span>
+        <span class="my-work__project-progress">
+          Progression
+          <app-progress-bar [value]="projet.avancement" [color]="sante()?.border ?? 'var(--color-action)'" [ariaLabel]="'Avancement de ' + projet.nom + ' : ' + projet.avancement + ' %'" />
+          <strong>{{ projet.avancement }} %</strong>
+        </span>
+        @if (responsable(); as r) {
+          <span aria-hidden="true">·</span>
+          <span>{{ r.nom }}</span>
+        }
+      </div>
+    </header>
+  } @else {
+    <header class="my-work__header">
+      <h1>Mon espace de travail</h1>
+      <p>Aucun projet ne vous est actuellement rattaché.</p>
+    </header>
+  }
+
+  <div class="my-work__toolbar">
+    <select class="my-work__select" [value]="projetFiltre()" (change)="changerProjetFiltre($any($event.target).value)" aria-label="Filtrer par projet">
+      @for (projet of mesProjets(); track projet.id) {
+        <option [value]="projet.id">{{ projet.nom }}</option>
+      }
+    </select>
+
+    <select class="my-work__select" (change)="changerSprintFiltre($any($event.target).value)" aria-label="Filtrer par sprint">
+      <option value="toutes" [selected]="sprintFiltre() === 'toutes'">Tous les sprints</option>
+      @for (sprint of sprintsProjet(); track sprint.id) {
+        <option [value]="sprint.id" [selected]="sprint.id === sprintFiltre()">{{ sprint.nom }}</option>
+      }
+    </select>
+
+    <select class="my-work__select" [value]="filtrePriorite()" (change)="filtrePriorite.set($any($event.target).value)" aria-label="Filtrer par priorité">
+      <option value="toutes">Toutes priorités</option>
+      <option value="critique">Critique</option>
+      <option value="haute">Haute</option>
+      <option value="normale">Normale</option>
+      <option value="basse">Basse</option>
+    </select>
+
+    @if (assigneAMoi()) {
+      <button type="button" class="my-work__chip my-work__chip--active" (click)="toggleAssigneAMoi()">
+        Assigné : moi <span aria-hidden="true">×</span>
+      </button>
+    } @else {
+      <button type="button" class="my-work__chip" (click)="toggleAssigneAMoi()">Assigné : moi</button>
+    }
+
+    <span class="my-work__count">{{ mesTaches().length }} tâche(s)</span>
+  </div>
+
+  @if (mesTaches().length > 0) {
+    <div class="my-work__board">
+      @for (col of columns; track col.statut) {
+        <div class="my-work__column">
+          <div class="my-work__column-header">
+            <span class="my-work__column-dot" [style.background]="col.couleur"></span>
+            <span class="my-work__column-title">{{ col.titre }}</span>
+            <span class="my-work__column-count">{{ tachesParColonne(col.statut).length }}</span>
+          </div>
+          <div class="my-work__column-body" (dragover)="$event.preventDefault()" (drop)="onColumnDrop(col.statut)">
+            @for (task of tachesParColonne(col.statut); track task.id) {
+              <app-task-card [task]="task" [draggable]="true" (open)="openTask($event)" (dragStart)="onCardDragStart($event)" />
+            } @empty {
+              <div class="my-work__empty-col">Aucune tâche.</div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <app-empty-state icon="✓" title="Aucune tâche pour ce filtre" description="Essayez un autre filtre ou revenez plus tard." />
+  }
+
+  <app-task-detail-panel [taskId]="selectedTaskId()" (close)="closePanel()" (openTask)="openTask($event)" />
+</div>

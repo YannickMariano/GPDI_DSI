@@ -1,0 +1,236 @@
+<div class="milestones">
+  <header class="milestones__header">
+    <div>
+      <h1>Jalons &amp; livrables</h1>
+      <p>
+        {{ milestones().length }} jalons · {{ livrablesTotal() }} livrables attendus
+        @if (enRetardCount() > 0) {
+          <span class="milestones__late-pill">{{ enRetardCount() }} en retard</span>
+        }
+      </p>
+    </div>
+    @if (peutGererJalons()) {
+      <button type="button" class="milestones__cta" (click)="declarerJalon()">Déclarer un jalon</button>
+    }
+  </header>
+
+  @if (milestones().length > 0) {
+    <div class="milestones__timeline">
+      @for (jalon of milestones(); track jalon.id) {
+        <div class="milestones__entry">
+          <div class="milestones__marker-col">
+            <span class="milestones__marker" [style.background]="statutStyle[jalon.statut].bg" [style.color]="statutStyle[jalon.statut].text">
+              {{ statutStyle[jalon.statut].icone }}
+            </span>
+            <span class="milestones__line" aria-hidden="true"></span>
+          </div>
+
+          <div class="milestones__card">
+            <div class="milestones__card-header">
+              <span class="milestones__name">{{ jalon.nom }}</span>
+              <span class="milestones__pill" [style.background]="statutStyle[jalon.statut].bg" [style.color]="statutStyle[jalon.statut].text">
+                {{ statutStyle[jalon.statut].label }}
+              </span>
+              <span class="milestones__date">{{ formatDateFr(jalon.date) }}</span>
+            </div>
+            <p class="milestones__description">{{ jalon.description }}</p>
+
+            <div class="milestones__livrables-header">
+              <span>Livrables</span>
+              @if (peutGererJalons() && peutModifier(jalon)) {
+                <button type="button" class="milestones__add-livrable-btn" (click)="ouvrirAjoutLivrable(jalon)">+ Ajouter un livrable</button>
+              }
+            </div>
+
+            <div class="milestones__livrables">
+              @for (livrable of jalon.livrables; track livrable.id) {
+                <div class="milestones__livrable-row">
+                  <div class="milestones__livrable-info">
+                    <span class="milestones__livrable-desc">{{ livrable.description }}</span>
+                    <span class="milestones__livrable-type">{{ livrable.type }}</span>
+                  </div>
+                  <span class="milestones__livrable-statut" [style.background]="livrableStatutStyle[livrable.statut].bg" [style.color]="livrableStatutStyle[livrable.statut].text">
+                    {{ livrableStatutStyle[livrable.statut].label }}
+                  </span>
+                  <span class="milestones__livrable-date">Prévu : {{ formatDateFr(livrable.dateLivraisonPrevue) }}</span>
+                  <span class="milestones__livrable-resultat">
+                    @if (livrable.statut === 'livre') {
+                      Livré le {{ formatDateFr(livrable.dateLivraison) }}
+                    } @else if (livrable.statut === 'rejete') {
+                      Rejeté le {{ formatDateFr(livrable.dateRejet) }} — {{ livrable.motifRejet }}
+                    } @else {
+                      En attente
+                    }
+                  </span>
+                  @if (peutGererJalons() && livrable.statut === 'a_livrer') {
+                    <div class="milestones__livrable-actions">
+                      <button type="button" class="milestones__livrable-btn" (click)="livrerLivrable(jalon, livrable)">Livrer</button>
+                      <button type="button" class="milestones__livrable-btn milestones__livrable-btn--danger" (click)="ouvrirRejet(jalon, livrable)">Rejeter</button>
+                    </div>
+                  }
+                </div>
+              } @empty {
+                <p class="milestones__livrables-empty">Aucun livrable pour ce jalon.</p>
+              }
+            </div>
+
+            @if (jalon.alerte) {
+              <div class="milestones__alert">{{ jalon.alerte }}</div>
+            }
+
+            @if (peutGererJalons()) {
+              <div class="milestones__card-actions">
+                @if (peutClore(jalon)) {
+                  <button type="button" class="milestones__card-action" (click)="demanderAnnulation(jalon)">Annuler le jalon</button>
+                  <button type="button" class="milestones__card-action" (click)="demanderTerminaison(jalon)">Terminer le jalon</button>
+                }
+                @if (peutModifier(jalon)) {
+                  <button type="button" class="milestones__card-action" (click)="ouvrirModificationJalon(jalon)">Modifier le jalon</button>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <app-empty-state
+      icon="◇"
+      title="Aucun jalon défini pour ce projet"
+      [actionLabel]="peutGererJalons() ? 'Déclarer un jalon' : undefined"
+      (action)="declarerJalon()"
+    />
+  }
+
+  <app-modal [open]="modalOuvert()" [width]="460" [ariaLabel]="modeEditionJalon() ? 'Modifier le jalon' : 'Déclarer un jalon'" (close)="fermerDeclaration()">
+    <form class="form-modal" [formGroup]="form" (ngSubmit)="confirmerDeclaration()" novalidate>
+      <div class="form-modal__header">
+        <h2>{{ modeEditionJalon() ? 'Modifier le jalon' : 'Déclarer un jalon' }}</h2>
+        <button type="button" class="form-modal__close" (click)="fermerDeclaration()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        <div class="field">
+          <label class="field__label" for="jNom">Nom du jalon</label>
+          <input id="jNom" type="text" class="input" formControlName="nom" [class.input--invalid]="form.controls.nom.invalid && form.controls.nom.touched" />
+          @if (form.controls.nom.invalid && form.controls.nom.touched) {
+            <span class="field__error">Le nom du jalon est requis.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="jDate">Date cible</label>
+          <input id="jDate" type="date" class="input" formControlName="date" [class.input--invalid]="form.controls.date.invalid && form.controls.date.touched" />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="jDescription">Description</label>
+          <textarea id="jDescription" class="input" rows="3" formControlName="description" [class.input--invalid]="form.controls.description.invalid && form.controls.description.touched"></textarea>
+        </div>
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">
+          {{ modeEditionJalon() ? 'Les livrables déjà ajoutés ne sont pas modifiés.' : 'Le jalon est créé avec le statut « Planifié » ; les livrables s\'ajoutent ensuite.' }}
+        </span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerDeclaration()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">{{ modeEditionJalon() ? 'Modifier le jalon' : 'Déclarer le jalon' }}</button>
+      </div>
+    </form>
+  </app-modal>
+
+  <app-modal [open]="livrableModalOuvert()" [width]="440" ariaLabel="Ajouter un livrable" (close)="fermerAjoutLivrable()">
+    <form class="form-modal" [formGroup]="livrableForm" (ngSubmit)="confirmerAjoutLivrable()" novalidate>
+      <div class="form-modal__header">
+        <h2>Ajouter un livrable</h2>
+        <button type="button" class="form-modal__close" (click)="fermerAjoutLivrable()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        <div class="field">
+          <label class="field__label" for="lvDescription">Description du livrable</label>
+          <input id="lvDescription" type="text" class="input" formControlName="description" [class.input--invalid]="livrableForm.controls.description.invalid && livrableForm.controls.description.touched" />
+          @if (livrableForm.controls.description.invalid && livrableForm.controls.description.touched) {
+            <span class="field__error">La description est requise.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="lvType">Type de livrable</label>
+          <select id="lvType" class="select" formControlName="type">
+            @for (t of typesLivrable; track t) {
+              <option [value]="t">{{ t }}</option>
+            }
+          </select>
+        </div>
+
+        @if (livrableForm.controls.type.value === 'Autre') {
+          <div class="field">
+            <label class="field__label" for="lvTypeAutre">Préciser le type</label>
+            <input id="lvTypeAutre" type="text" class="input" formControlName="typeAutre" placeholder="Ex. Rapport d'audit" />
+          </div>
+        }
+
+        <div class="field">
+          <label class="field__label" for="lvDate">Date de livraison</label>
+          <input id="lvDate" type="date" class="input" formControlName="dateLivraisonPrevue" [class.input--invalid]="livrableForm.controls.dateLivraisonPrevue.invalid && livrableForm.controls.dateLivraisonPrevue.touched" />
+          @if (jalonPourLivrable(); as jalon) {
+            <span class="field__hint">Ne peut pas dépasser le {{ formatDateFr(jalon.date) }}, date du jalon.</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">Le livrable est ajouté avec le statut « À livrer ».</span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerAjoutLivrable()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">Ajouter</button>
+      </div>
+    </form>
+  </app-modal>
+
+  <app-modal [open]="rejetModalOuvert()" [width]="420" ariaLabel="Rejeter le livrable" (close)="fermerRejet()">
+    <form class="form-modal" [formGroup]="rejetForm" (ngSubmit)="confirmerRejet()" novalidate>
+      <div class="form-modal__header">
+        <h2>Rejeter le livrable</h2>
+        <button type="button" class="form-modal__close" (click)="fermerRejet()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        @if (livrableARejeter(); as cible) {
+          <p class="milestones__rejet-cible">{{ cible.livrable.description }}</p>
+        }
+        <div class="field">
+          <label class="field__label" for="rjMotif">Motif du rejet</label>
+          <textarea id="rjMotif" class="input" rows="3" formControlName="motif" [class.input--invalid]="rejetForm.controls.motif.invalid && rejetForm.controls.motif.touched"></textarea>
+          @if (rejetForm.controls.motif.invalid && rejetForm.controls.motif.touched) {
+            <span class="field__error">Le motif du rejet est requis.</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-modal__footer">
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerRejet()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">Rejeter</button>
+      </div>
+    </form>
+  </app-modal>
+
+  <app-confirmation-dialog
+    [open]="jalonATerminer() !== null"
+    title="Terminer le jalon"
+    [message]="'Marquer « ' + (jalonATerminer()?.nom ?? '') + ' » comme atteint ?'"
+    confirmLabel="Terminer"
+    (confirm)="confirmerTerminaison()"
+    (cancel)="annulerTerminaison()"
+  />
+
+  <app-confirmation-dialog
+    [open]="jalonAAnnuler() !== null"
+    title="Annuler le jalon"
+    [message]="'Annuler « ' + (jalonAAnnuler()?.nom ?? '') + ' » ? Il restera visible avec le statut Annulé.'"
+    confirmLabel="Annuler le jalon"
+    [destructive]="true"
+    (confirm)="confirmerAnnulation()"
+    (cancel)="annulerAnnulation()"
+  />
+</div>

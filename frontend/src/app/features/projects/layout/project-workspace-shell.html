@@ -1,0 +1,38 @@
+@if (project(); as p) {
+  <div class="workspace">
+    <header class="workspace__header">
+      <div class="workspace__title-row">
+        <h1 class="workspace__title">{{ p.nom }}</h1>
+        <span class="workspace__status-pill">
+          {{ p.statut === 'en_cours' ? 'En cours' : p.statut === 'en_preparation' ? 'En préparation' : p.statut === 'suspendu' ? 'Suspendu' : p.statut === 'archive' ? 'Archivé' : 'Clôturé' }}
+        </span>
+        @if (sante(); as s) {
+          <span class="workspace__sante-pill" [style.background]="s.bg" [style.color]="s.text">{{ s.label }}</span>
+        }
+        <span class="workspace__code">{{ p.codeReference }}</span>
+      </div>
+      <div class="workspace__meta">
+        <span>{{ p.direction }}</span>
+        <span aria-hidden="true">·</span>
+        <span>{{ sprintLabel() }}</span>
+        <span aria-hidden="true">·</span>
+        <span class="workspace__progress">
+          Progression
+          <app-progress-bar [value]="p.avancement" [color]="sante()?.border ?? 'var(--color-action)'" [ariaLabel]="'Avancement du projet : ' + p.avancement + ' %'" />
+          <strong>{{ p.avancement }} %</strong>
+        </span>
+        @if (responsable(); as r) {
+          <span aria-hidden="true">·</span>
+          <span>{{ r.nom }}</span>
+        }
+      </div>
+      <app-tabs [items]="tabs()" [selected]="activeTab()" (selectedChange)="goToTab($event)" variant="underline" />
+    </header>
+
+    <div class="workspace__content">
+      <router-outlet />
+    </div>
+  </div>
+} @else {
+  <p class="workspace__not-found">Projet introuvable.</p>
+}

@@ -1,0 +1,85 @@
+/**
+ * Design tokens GPDI — extraits du design Claude Design.
+ * `--color-text-quaternary` a été audité à l'aide d'axe-core : sa valeur mockup d'origine
+ * (#98a2b3, ~2.6:1 sur blanc) échouait WCAG AA sur les codes de tâche, dates et libellés
+ * mono utilisés partout dans l'app. Elle est alignée sur `--color-text-tertiary` (~4.8:1)
+ * pour que tout usage existant et futur reste conforme sans devoir mémoriser une distinction
+ * texte/décoratif fragile. `--color-border-decorative` conserve la teinte claire d'origine
+ * pour les éléments non textuels (ex. ligne pointillée « idéal » du burndown).
+ */
+:root {
+  /* Neutres */
+  --color-ink: #0f1729;
+  --color-text-secondary: #475467;
+  --color-text-tertiary: #6b7280;
+  --color-text-quaternary: #6b7280;
+  --color-border-decorative: #98a2b3;
+  --color-border: #e4e7ec;
+  --color-border-strong: #d0d5dd;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f7f8fa;
+  --color-surface-alt: #f2f4f7;
+  --color-bg: #eceef2;
+
+  /* Rail / shell */
+  --color-rail-bg: #0f1729;
+  --color-rail-hover: #1b2438;
+  --color-rail-border: #2b3550;
+  --color-rail-text-muted: #7d8ba8;
+
+  /* Sémantiques */
+  --color-action: #2a5bd7;
+  --color-action-hover: #1e46ab;
+  --color-action-bg: #eef2ff;
+  --color-success: #17876d;
+  --color-success-text: #0f6b52;
+  --color-success-bg: #e6f4f0;
+  --color-alert: #b45309;
+  --color-alert-bg: #fdf3e3;
+  --color-error: #c0392b;
+  --color-error-text: #922a20;
+  --color-error-bg: #fdeceb;
+  --color-error-border: #f0c8c3;
+  --color-ai: #6941c6;
+  --color-ai-bg: #f4f0ff;
+
+  /* Statuts tâche */
+  --status-a-faire-bg: #f2f4f7;
+  --status-a-faire-text: #475467;
+  --status-a-faire-dot: #98a2b3;
+  --status-en-cours-bg: #eef2ff;
+  --status-en-cours-text: #2a5bd7;
+  --status-en-cours-dot: #2a5bd7;
+  --status-en-test-bg: #f4f0ff;
+  --status-en-test-text: #6941c6;
+  --status-en-test-dot: #6941c6;
+  --status-bloquee-bg: #fdeceb;
+  --status-bloquee-text: #c0392b;
+  --status-bloquee-dot: #c0392b;
+  --status-terminee-bg: #e6f4f0;
+  --status-terminee-text: #0f6b52;
+  --status-terminee-dot: #17876d;
+  --status-reportee-bg: #f2f4f7;
+  --status-reportee-text: #6b7280;
+  --status-reportee-dot: #98a2b3;
+
+  /* Priorités */
+  --priority-critique-bg: #fdeceb;
+  --priority-critique-text: #c0392b;
+  --priority-haute-bg: #fdf3e3;
+  --priority-haute-text: #b45309;
+  --priority-normale-bg: #f2f4f7;
+  --priority-normale-text: #475467;
+  --priority-basse-bg: #f2f4f7;
+  --priority-basse-text: #475467;
+
+  /* Typographie */
+  --font-ui: 'Manrope', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* Rayons / élévation / focus */
+  --radius-control: 6px;
+  --radius-card: 10px;
+  --shadow-elevated: 0 4px 20px rgba(15, 23, 41, 0.08);
+  --focus-ring: 0 0 0 3px var(--color-action-bg);
+}

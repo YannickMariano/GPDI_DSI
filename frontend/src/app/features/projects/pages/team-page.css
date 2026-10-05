@@ -1,0 +1,127 @@
+.team {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.team__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.team__header h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.team__header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.team__over-pill {
+  padding: 2px 9px;
+  border-radius: 20px;
+  background: var(--status-bloquee-bg);
+  color: var(--status-bloquee-text);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.team__cta {
+  padding: 9px 16px;
+  border-radius: var(--radius-control);
+  border: none;
+  background: var(--color-action);
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.team__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.team__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: 18px 20px;
+}
+
+.team__card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.team__name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.team__role {
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+.team__state-pill {
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.team__charge-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--color-text-tertiary);
+}
+
+.team__charge-value {
+  font-family: var(--font-mono);
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.team__hours {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+.team__stats {
+  display: flex;
+  gap: 14px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-surface-alt);
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.team__alert {
+  padding: 9px 11px;
+  background: var(--color-ai-bg);
+  color: #4a3a80;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+}

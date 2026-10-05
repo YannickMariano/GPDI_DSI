@@ -1,0 +1,220 @@
+.time-tracking {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 24px;
+}
+
+.time-tracking__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.time-tracking__header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.time-tracking__header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.time-tracking__summary {
+  display: flex;
+  gap: 22px;
+  padding: 12px 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.time-tracking__summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+.time-tracking__summary-item strong {
+  font-size: 16px;
+  color: var(--color-ink);
+}
+
+.time-tracking__mono {
+  font-family: var(--font-mono);
+}
+
+.time-tracking__ecart--depasse {
+  color: var(--color-error-text);
+}
+
+.time-tracking__ecart--sous {
+  color: var(--color-success-text);
+}
+
+.time-tracking__ecart--neutre {
+  color: var(--color-text-secondary);
+}
+
+.time-tracking__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.time-tracking__select {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+}
+
+.time-tracking__count {
+  margin-left: auto;
+  font-size: 12.5px;
+  color: var(--color-text-tertiary);
+}
+
+.time-tracking__table {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.time-tracking__row {
+  display: grid;
+  grid-template-columns: 2fr 1.1fr 1fr 0.8fr 0.8fr 1.5fr 0.9fr;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--color-surface-alt);
+  min-width: 980px;
+}
+
+.time-tracking__row--head {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-quaternary);
+  background: var(--color-surface-muted);
+}
+
+.time-tracking__row:hover {
+  background: var(--color-surface-muted);
+}
+
+.time-tracking__task {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  min-width: 0;
+}
+
+.time-tracking__code {
+  flex: 0 0 auto;
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+.time-tracking__titre {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time-tracking__projet {
+  font-size: 12.5px;
+  color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time-tracking__blocage {
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-error-text);
+  white-space: nowrap;
+}
+
+.time-tracking__num-col {
+  text-align: right;
+}
+
+.time-tracking__avancement {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.time-tracking__avancement-text {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.time-tracking__action-btn {
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.time-tracking__action-btn:hover:not(:disabled) {
+  background: var(--color-action-bg);
+  color: var(--color-action);
+  border-color: var(--color-action);
+}
+
+.time-tracking__action-btn--termine {
+  border-color: var(--color-success-bg);
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+  cursor: default;
+}
+
+.time-tracking__action-btn:disabled {
+  opacity: 1;
+}
+
+.time-tracking__empty {
+  margin: 0;
+  padding: 40px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+@media (max-width: 900px) {
+  .time-tracking__table {
+    overflow-x: auto;
+  }
+}

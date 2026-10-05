@@ -1,0 +1,100 @@
+<main class="login">
+  <div class="login__panel">
+    <aside class="login__hero" aria-hidden="true">
+      <span class="login__hero-logo">G</span>
+      <h2 class="login__hero-title">Pilotez vos projets,<br />en toute clarté.</h2>
+      <p class="login__hero-subtitle">Suivi d'avancement, risques et charges d'équipe réunis dans un seul espace.</p>
+
+      <svg class="login__hero-illustration" viewBox="0 0 320 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="160" cy="120" r="108" fill="#ffffff" fill-opacity="0.06" />
+        <circle cx="160" cy="120" r="76" fill="#ffffff" fill-opacity="0.08" />
+        <rect x="70" y="70" width="180" height="126" rx="12" fill="#ffffff" fill-opacity="0.14" />
+        <rect x="70" y="70" width="180" height="26" rx="12" fill="#ffffff" fill-opacity="0.22" />
+        <circle cx="86" cy="83" r="4" fill="#ffffff" fill-opacity="0.5" />
+        <circle cx="98" cy="83" r="4" fill="#ffffff" fill-opacity="0.5" />
+        <circle cx="110" cy="83" r="4" fill="#ffffff" fill-opacity="0.5" />
+        <rect x="86" y="112" width="72" height="8" rx="4" fill="#ffffff" fill-opacity="0.35" />
+        <rect x="86" y="128" width="96" height="8" rx="4" fill="#ffffff" fill-opacity="0.22" />
+        <polyline points="86,178 108,160 128,168 150,142 172,150 194,120 216,132 234,104" stroke="#ffffff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" stroke-opacity="0.85" />
+        <circle cx="234" cy="104" r="6" fill="#ffffff" />
+      </svg>
+    </aside>
+
+    <div class="login__card">
+      <div class="login__brand">
+        <span class="login__logo" aria-hidden="true">G</span>
+        <span class="login__brand-name">GPDI</span>
+      </div>
+      <h1 class="login__title">Connexion</h1>
+      <p class="login__subtitle">Gestion de projet intelligente · DSI / MEF</p>
+
+    @if (errorMessage()) {
+      <div class="login__alert" role="alert">
+        <span class="login__alert-icon" aria-hidden="true">!</span>
+        <div>
+          <div class="login__alert-title">Identifiants incorrects</div>
+          <div class="login__alert-text">{{ errorMessage() }}</div>
+        </div>
+      </div>
+    }
+
+    <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      <div class="field">
+        <label class="field__label" for="identifiant">Matricule ou e-mail</label>
+        <input
+          id="identifiant"
+          type="text"
+          class="input"
+          [class.input--invalid]="errorMessage()"
+          placeholder="Ex. 45820 ou k.traore@mef.gov"
+          formControlName="identifiant"
+          autocomplete="username"
+        />
+        @if (form.controls.identifiant.invalid && form.controls.identifiant.touched) {
+          <span class="field__error">Le matricule ou l'e-mail est requis.</span>
+        }
+      </div>
+
+      <div class="field">
+        <div class="login__password-row">
+          <label class="field__label" for="motDePasse">Mot de passe</label>
+          <a href="#mdp" class="login__forgot">Oublié ?</a>
+        </div>
+        <div class="login__password-field">
+          <input
+            id="motDePasse"
+            [type]="showPassword() ? 'text' : 'password'"
+            class="input"
+            [class.input--invalid]="errorMessage()"
+            formControlName="motDePasse"
+            autocomplete="current-password"
+          />
+          <button
+            type="button"
+            class="login__password-toggle"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-pressed]="showPassword()"
+            [attr.aria-label]="showPassword() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+          >
+            {{ showPassword() ? 'Masquer' : 'Afficher' }}
+          </button>
+        </div>
+        @if (form.controls.motDePasse.invalid && form.controls.motDePasse.touched) {
+          <span class="field__error">Le mot de passe est requis.</span>
+        }
+      </div>
+
+      <label class="checkbox-row" for="gardeSession">
+        <input id="gardeSession" type="checkbox" formControlName="gardeSession" />
+        Garder ma session ouverte
+      </label>
+
+      <button app-button type="submit" variant="primary" class="login__submit" [disabled]="isSubmitting()">
+        {{ isSubmitting() ? 'Connexion…' : 'Se connecter' }}
+      </button>
+    </form>
+
+    <p class="login__footnote">Toute connexion est journalisée avec date, heure et adresse IP.</p>
+    </div>
+  </div>
+</main>

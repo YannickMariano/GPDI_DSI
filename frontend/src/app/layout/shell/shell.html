@@ -1,0 +1,16 @@
+<div class="shell">
+  <app-sidebar [mobileOpen]="mobileNavOpen()" />
+
+  @if (mobileNavOpen()) {
+    <div class="shell__backdrop" (click)="mobileNavOpen.set(false)"></div>
+  }
+
+  <div class="shell__content">
+    <app-header (menuToggle)="mobileNavOpen.set(!mobileNavOpen())" />
+    <main class="shell__main">
+      <router-outlet />
+    </main>
+  </div>
+
+  <app-toast-tray />
+</div>

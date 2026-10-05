@@ -1,0 +1,31 @@
+<div class="portfolio">
+  <header class="portfolio__header">
+    <h1>Portefeuille de projets</h1>
+    <p>{{ compteurs().tous }} projets suivis par la DSI</p>
+  </header>
+
+  <div class="portfolio__filters" role="group" aria-label="Filtrer par état de santé">
+    <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'tous'" (click)="setFiltre('tous')">
+      Tous ({{ compteurs().tous }})
+    </button>
+    <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'a_risque'" (click)="setFiltre('a_risque')">
+      À risque ({{ compteurs().a_risque }})
+    </button>
+    <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'sous_surveillance'" (click)="setFiltre('sous_surveillance')">
+      Sous surveillance ({{ compteurs().sous_surveillance }})
+    </button>
+    <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'sain'" (click)="setFiltre('sain')">
+      Sains ({{ compteurs().sain }})
+    </button>
+  </div>
+
+  @if (projetsFiltres().length > 0) {
+    <div class="portfolio__grid">
+      @for (projet of projetsFiltres(); track projet.id) {
+        <app-project-card [project]="projet" [responsable]="responsable(projet.responsableId)" [clickable]="cartesCliquables()" />
+      }
+    </div>
+  } @else {
+    <app-empty-state icon="◌" title="Aucun projet ne correspond à ce filtre" actionLabel="Réinitialiser" (action)="setFiltre('tous')" />
+  }
+</div>

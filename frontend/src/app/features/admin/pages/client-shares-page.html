@@ -1,0 +1,91 @@
+<div class="client-shares">
+  <header class="client-shares__header">
+    <div>
+      <h1 class="client-shares__title">Partage client</h1>
+      <span class="client-shares__meta">{{ partages().length }} partage(s)</span>
+    </div>
+    <button type="button" class="client-shares__share-btn" (click)="ouvrirPartage()">+ Partager un projet</button>
+  </header>
+
+  <div class="client-shares__list">
+    <p class="client-shares__panel-note">Un compte de rôle Direction métier n'accède qu'à l'état d'avancement des projets qui lui sont explicitement partagés : ni tâches, ni charges, ni membres de l'équipe.</p>
+
+    <div class="client-share-table" role="table">
+      <div class="client-share-table__row client-share-table__row--head" role="row">
+        <span role="columnheader">Client</span>
+        <span role="columnheader">Projet partagé</span>
+        <span role="columnheader">Date partage</span>
+        <span role="columnheader">Échéance du partage</span>
+        <span role="columnheader">Action</span>
+      </div>
+      @for (ligne of partages(); track ligne.share.id) {
+        <div class="client-share-table__row" role="row">
+          <span class="client-share-table__client" role="cell">
+            <app-avatar [initiales]="ligne.client.initiales" [bg]="ligne.client.avatarBg" [nom]="ligne.client.nom" [size]="28" />
+            <span>
+              <strong>{{ ligne.client.nom }}</strong>
+              <span class="client-share-table__sub">{{ ligne.client.direction }}</span>
+            </span>
+          </span>
+          <span role="cell">{{ ligne.share.titreProjet }}</span>
+          <span class="client-share-table__date" role="cell">{{ ligne.share.depuis }}</span>
+          <span class="client-share-table__date" role="cell">{{ ligne.share.echeance }}</span>
+          <span role="cell">
+            @if (ligne.share.etat === 'actif') {
+              <button type="button" class="client-shares__link client-shares__link--danger" (click)="revoquer(ligne.share.id)">Révoquer</button>
+            } @else if (ligne.share.etat === 'expire') {
+              <span class="client-shares__etat client-shares__etat--revoque">Expiré</span>
+            } @else {
+              <span class="client-shares__etat client-shares__etat--revoque">Révoqué</span>
+            }
+          </span>
+        </div>
+      } @empty {
+        <div class="client-share-table__empty">Aucun partage.</div>
+      }
+    </div>
+  </div>
+
+  <app-modal [open]="modalOuvert()" [width]="480" ariaLabel="Partager un projet" (close)="fermerPartage()">
+    <form class="form-modal" [formGroup]="form" (ngSubmit)="confirmerPartage()" novalidate>
+      <div class="form-modal__header">
+        <h2>Partager un projet</h2>
+        <button type="button" class="form-modal__close" (click)="fermerPartage()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        <div class="field">
+          <label class="field__label" for="csClient">Compte client</label>
+          <select id="csClient" class="select" formControlName="clientId" [class.input--invalid]="form.controls.clientId.invalid && form.controls.clientId.touched">
+            <option value="" disabled>Sélectionner un compte Direction métier</option>
+            @for (c of clients(); track c.id) {
+              <option [value]="c.id">{{ c.nom }} — {{ c.direction }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="csProjet">Projet</label>
+          <select id="csProjet" class="select" formControlName="projectId" [class.input--invalid]="form.controls.projectId.invalid && form.controls.projectId.touched">
+            <option value="" disabled>Sélectionner un projet</option>
+            @for (p of projects(); track p.id) {
+              <option [value]="p.id">{{ p.titre }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="csEcheance">Échéance du partage</label>
+          <input id="csEcheance" type="date" class="input" formControlName="echeance" [class.input--invalid]="form.controls.echeance.invalid && form.controls.echeance.touched" />
+          <span class="field__hint">Date à laquelle l'accès du compte client sera automatiquement révisé.</span>
+        </div>
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">Le compte client n'aura accès qu'à l'état d'avancement du projet partagé.</span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerPartage()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">Partager</button>
+      </div>
+    </form>
+  </app-modal>
+</div>

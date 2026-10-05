@@ -1,0 +1,142 @@
+<div class="admin-team">
+  <h1 class="admin-team__title">Équipe de projet</h1>
+
+  <section class="admin-team__panel">
+    <div class="admin-team__panel-header">
+      <span>Équipes</span>
+      <span class="admin-team__count">{{ teams().length }}</span>
+      <button type="button" class="admin-team__create-btn" (click)="ouvrirCreation()">+ Créer une équipe</button>
+    </div>
+    <p class="admin-team__panel-note">Création, modification et suppression des équipes. Une équipe se définit par son nom, son chef d'équipe et ses membres ; l'affectation aux projets se fait ailleurs.</p>
+
+    <div class="admin-team__grid">
+      @for (ligne of equipesAffichees(); track ligne.team.id) {
+        <div class="admin-team__card">
+          <div class="admin-team__card-header">
+            <span class="admin-team__card-name">{{ ligne.team.nom }}</span>
+            <span class="admin-team__card-count">{{ ligne.membres.length }} membre{{ ligne.membres.length === 1 ? '' : 's' }}</span>
+            <span class="admin-team__card-actions">
+              <button type="button" class="admin-team__link" (click)="ouvrirModification(ligne.team)">Modifier</button>
+              <button type="button" class="admin-team__link admin-team__link--danger" (click)="demanderSuppression(ligne.team)">Supprimer</button>
+            </span>
+          </div>
+
+          <span class="admin-team__status" [class.admin-team__status--inactive]="!ligne.estActive">
+            <span class="admin-team__status-dot" aria-hidden="true"></span>
+            {{ ligne.estActive ? 'Actif sur ' + ligne.projetsActifs + ' projet' + (ligne.projetsActifs === 1 ? '' : 's') : 'Inactif' }}
+          </span>
+
+          @if (ligne.team.description) {
+            <p class="admin-team__description">{{ ligne.team.description }}</p>
+          }
+
+          @if (ligne.chef; as chef) {
+            <div class="admin-team__chef-row">
+              <app-avatar [initiales]="chef.initiales" [bg]="chef.avatarBg" [nom]="chef.nom" [size]="26" />
+              <span class="admin-team__chef-name">{{ chef.nom }}</span>
+              <span class="admin-team__chef-badge">Chef d'équipe</span>
+            </div>
+          }
+          <div class="admin-team__members">
+            @for (membre of ligne.membres; track membre!.id) {
+              <span class="admin-team__member-chip">
+                <app-avatar [initiales]="membre!.initiales" [bg]="membre!.avatarBg" [size]="20" />
+                <span>{{ membre!.nom }}</span>
+              </span>
+            } @empty {
+              <span class="admin-team__no-members">Aucun membre rattaché.</span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </section>
+
+  <app-modal [open]="modalOuvert()" [width]="450" [ariaLabel]="modeEdition() ? 'Modifier une équipe' : 'Créer une équipe'" (close)="fermerModal()">
+    <form class="form-modal" [formGroup]="form" (ngSubmit)="enregistrerEquipe()" novalidate>
+      <div class="form-modal__header">
+        <h2>{{ modeEdition() ? 'Modifier l\'équipe' : 'Créer une équipe' }}</h2>
+        <button type="button" class="form-modal__close" (click)="fermerModal()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        <div class="field">
+          <label class="field__label" for="eqNom">Nom de l'équipe</label>
+          <input id="eqNom" type="text" class="input" formControlName="nom" [class.input--invalid]="form.controls.nom.invalid && form.controls.nom.touched" />
+          @if (form.controls.nom.invalid && form.controls.nom.touched) {
+            <span class="field__error">Le nom de l'équipe est requis.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="eqChef">Chef d'équipe</label>
+          <select id="eqChef" class="select" formControlName="chefId" [class.input--invalid]="form.controls.chefId.invalid && form.controls.chefId.touched">
+            <option value="" disabled>Sélectionner un chef d'équipe</option>
+            @for (chef of chefsDisponibles(); track chef.id) {
+              <option [value]="chef.id">{{ chef.nom }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="eqDescription">Description</label>
+          <textarea id="eqDescription" class="input" rows="3" formControlName="description" placeholder="Rôle et périmètre de cette équipe"></textarea>
+        </div>
+
+        <div class="field">
+          <span class="field__label" id="eqMembresLabel">Membres de l'équipe</span>
+
+          @if (membresChoisis().length > 0) {
+            <div class="admin-team__member-chips">
+              @for (membre of membresChoisis(); track membre.id) {
+                <span class="admin-team__selected-chip">
+                  <app-avatar [initiales]="membre.initiales" [bg]="membre.avatarBg" [size]="18" />
+                  <span>{{ membre.nom }}</span>
+                  <button type="button" class="admin-team__chip-remove" (click)="toggleMembre(membre.id)" [attr.aria-label]="'Retirer ' + membre.nom">×</button>
+                </span>
+              }
+            </div>
+          }
+
+          <input
+            type="text"
+            class="input"
+            placeholder="Rechercher un membre par nom…"
+            aria-labelledby="eqMembresLabel"
+            [value]="membreRecherche()"
+            (input)="membreRecherche.set($any($event.target).value)"
+          />
+
+          <div class="admin-team__member-picker">
+            @for (membre of membresFiltres(); track membre.id) {
+              <label class="admin-team__member-option">
+                <input type="checkbox" [checked]="membreCoche(membre.id)" (change)="toggleMembre(membre.id)" />
+                <app-avatar [initiales]="membre.initiales" [bg]="membre.avatarBg" [size]="22" />
+                <span>{{ membre.nom }}</span>
+              </label>
+            } @empty {
+              <span class="admin-team__no-members">Aucun membre ne correspond à cette recherche.</span>
+            }
+          </div>
+          <span class="field__hint">{{ membresSelectionnes().size }} membre(s) sélectionné(s) · un agent peut appartenir à plusieurs équipes.</span>
+        </div>
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">La suppression d'une équipe ne supprime pas les comptes : les agents sont simplement détachés.</span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerModal()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">{{ modeEdition() ? 'Modifier' : 'Créer' }}</button>
+      </div>
+    </form>
+  </app-modal>
+
+  <app-confirmation-dialog
+    [open]="equipeASupprimer() !== null"
+    title="Supprimer l'équipe"
+    [message]="'Supprimer « ' + (equipeASupprimer()?.nom ?? '') + ' » ? Les agents rattachés seront simplement détachés, leurs comptes ne seront pas supprimés.'"
+    confirmLabel="Supprimer"
+    [destructive]="true"
+    (confirm)="confirmerSuppression()"
+    (cancel)="annulerSuppression()"
+  />
+</div>

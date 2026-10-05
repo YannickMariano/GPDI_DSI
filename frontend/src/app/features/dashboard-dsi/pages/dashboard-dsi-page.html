@@ -1,0 +1,81 @@
+<div class="dsi-dashboard">
+  <header class="dsi-dashboard__header">
+    <div class="dsi-dashboard__title-block">
+      <h1 class="dsi-dashboard__title">Portefeuille de la DSI</h1>
+      <p class="dsi-dashboard__subtitle">{{ projetsActifs() }} projets actifs · trié par criticité</p>
+    </div>
+    <a routerLink="/portefeuille" class="dsi-dashboard__link">Voir tous les projets</a>
+  </header>
+
+  <div class="dsi-dashboard__kpis">
+    <app-kpi-card label="Projets actifs" [value]="projetsActifs()" unite="projets" />
+    <app-kpi-card label="Avancement moyen" [value]="avancementMoyen()" unite="%" />
+    <app-kpi-card label="Projets à risque" [value]="projetsARisque()" unite="projets" deltaColor="var(--color-error)" [delta]="projetsARisque() > 0 ? 'à surveiller' : undefined" />
+    <app-kpi-card label="Jalons à risque" [value]="jalonsARisque()" unite="jalon(s)" deltaColor="var(--color-alert)" [delta]="jalonsARisque() > 0 ? 'arbitrage requis' : undefined" />
+  </div>
+
+  <div class="dsi-dashboard__grid">
+    <section class="dsi-dashboard__panel dsi-dashboard__panel--attention">
+      <div class="dsi-dashboard__panel-header">
+        <h2>Projets nécessitant une attention</h2>
+        <span class="dsi-dashboard__count-badge">{{ attentionRequise().length }}</span>
+      </div>
+
+      @if (attentionRequise().length > 0) {
+        <div class="attention-table">
+          <div class="attention-table__row attention-table__row--head" aria-hidden="true">
+            <span>Projet</span>
+            <span>Responsable</span>
+            <span>Sprint</span>
+            <span>Avancement</span>
+            <span>Risque</span>
+          </div>
+          @for (projet of attentionRequise(); track projet.id) {
+            <a class="attention-table__row" [routerLink]="['/projets', projet.id, 'apercu']">
+              <span class="attention-table__project">
+                <strong>{{ projet.nom }}</strong>
+                <span>{{ projet.direction }}</span>
+              </span>
+              <span>{{ responsableNom(projet.responsableId) }}</span>
+              <span>Sprint {{ projet.sprintActuelIndex }}/{{ projet.sprintTotal }}</span>
+              <span class="attention-table__progress">
+                <app-progress-bar [value]="projet.avancement" [ariaLabel]="'Avancement de ' + projet.nom + ' : ' + projet.avancement + ' %'" />
+                <span>{{ projet.avancement }} %</span>
+              </span>
+              <span>
+                <span class="attention-table__pill" [style.background]="santeConfig[projet.sante].bg" [style.color]="santeConfig[projet.sante].text">
+                  {{ santeConfig[projet.sante].label }}
+                </span>
+              </span>
+            </a>
+          }
+        </div>
+      } @else {
+        <app-empty-state icon="✓" title="Aucun projet ne nécessite d'attention particulière" />
+      }
+    </section>
+
+    <div class="dsi-dashboard__side">
+      <section class="dsi-dashboard__panel">
+        <h2>Heures consommées</h2>
+        @if (velocity().length > 0) {
+          <div class="velocity-chart">
+            @for (point of velocity(); track point.sprint) {
+              <div class="velocity-chart__bar-col">
+                <div
+                  class="velocity-chart__bar"
+                  [style.height.%]="(point.heures / maxVelocity()) * 100"
+                  [style.background]="point.courant ? 'var(--color-action)' : 'var(--color-action-bg)'"
+                ></div>
+                <span class="velocity-chart__label">{{ point.sprint }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <app-empty-state icon="◔" title="Aucun sprint démarré" description="Les heures apparaîtront dès qu'un sprint aura été lancé." />
+        }
+        <p class="dsi-dashboard__caption">Heures consommées sur les 6 derniers sprints démarrés du portefeuille.</p>
+      </section>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,31 @@
+@if (risks().length > 0) {
+  <div class="risk-table" role="table" aria-label="Registre des risques">
+    <div class="risk-table__row risk-table__row--head" role="row">
+      <span role="columnheader">Risque</span>
+      <span role="columnheader">Criticité</span>
+      <span role="columnheader">Porteur</span>
+    </div>
+    @for (risk of risks(); track risk.id) {
+      <div class="risk-table__row" role="row">
+        <span class="risk-table__risk" role="cell">
+          <strong>{{ risk.code }} — {{ risk.libelle }}</strong>
+          <span>Parade : {{ risk.parade }}</span>
+        </span>
+        <span role="cell">
+          @let criticite = criticiteRisque(risk.probabilite, risk.impact);
+          <span class="risk-table__pill" [style.background]="criticiteLabel[criticite].bg" [style.color]="criticiteLabel[criticite].text">
+            {{ criticiteLabel[criticite].label }}
+          </span>
+        </span>
+        <span class="risk-table__porteur" role="cell">
+          @if (porteur(risk.porteurId); as p) {
+            <app-avatar [initiales]="p.initiales" [bg]="p.avatarBg" [nom]="p.nom" [size]="22" />
+            <span>{{ p.nom }}</span>
+          }
+        </span>
+      </div>
+    }
+  </div>
+} @else {
+  <app-empty-state icon="✓" title="Aucun risque actif" description="Aucun risque n'est actuellement suivi sur ce périmètre." />
+}

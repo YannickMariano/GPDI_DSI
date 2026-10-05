@@ -1,0 +1,103 @@
+<app-modal [open]="open()" [width]="440" ariaLabel="Nouveau lien de dépendance" (close)="close.emit()">
+  @if (task(); as t) {
+    <div class="dep-modal">
+      <div class="dep-modal__header">
+        <h2>Nouveau lien de dépendance</h2>
+        <button type="button" class="form-modal__close" (click)="close.emit()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="dep-modal__body">
+        <div class="dep-modal__step">
+          <span class="dep-modal__step-title">1 · Sens du lien</span>
+          <div class="dep-modal__sens">
+            <button
+              type="button"
+              class="dep-modal__sens-card"
+              [class.dep-modal__sens-card--active]="sensLien() === 'bloquee_par'"
+              (click)="choisirSensLien('bloquee_par')"
+            >
+              <span class="dep-modal__sens-title">{{ t.code }} est bloquée par…</span>
+              <span class="dep-modal__sens-hint">la tâche choisie doit avancer d'abord</span>
+            </button>
+            <button
+              type="button"
+              class="dep-modal__sens-card"
+              [class.dep-modal__sens-card--active]="sensLien() === 'bloque'"
+              (click)="choisirSensLien('bloque')"
+            >
+              <span class="dep-modal__sens-title">{{ t.code }} bloque…</span>
+              <span class="dep-modal__sens-hint">cette tâche doit avancer d'abord</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="dep-modal__step">
+          <span class="dep-modal__step-title">2 · Tâche liée</span>
+          <label for="dep-modal-search" class="sr-only">Chercher une tâche par code ou titre</label>
+          <input
+            id="dep-modal-search"
+            type="text"
+            class="dep-modal__search"
+            placeholder="Chercher par code ou titre…"
+            [value]="rechercheTache()"
+            (input)="rechercheTache.set($any($event.target).value)"
+          />
+          <div class="dep-modal__candidates">
+            @for (c of candidatsLien(); track c.tache.id) {
+              <button
+                type="button"
+                class="dep-modal__candidate"
+                [class.dep-modal__candidate--selected]="tacheLieeId() === c.tache.id"
+                [class.dep-modal__candidate--disabled]="c.dejaLiee"
+                [disabled]="c.dejaLiee"
+                (click)="choisirTacheLiee(c.tache.id, c.dejaLiee)"
+              >
+                <span class="dep-modal__candidate-check">{{ tacheLieeId() === c.tache.id ? '✓' : '' }}</span>
+                <span class="dep-modal__candidate-code">{{ c.tache.code }}</span>
+                <span class="dep-modal__candidate-title">{{ c.tache.titre }}</span>
+                @if (c.dejaLiee) {
+                  <span class="dep-modal__candidate-linked">déjà liée</span>
+                } @else {
+                  <app-status-badge [statut]="c.tache.statut" />
+                }
+              </button>
+            } @empty {
+              <p class="dep-modal__empty">Aucune tâche ne correspond.</p>
+            }
+          </div>
+        </div>
+
+        <div class="dep-modal__step">
+          <span class="dep-modal__step-title">3 · Type de lien</span>
+          <div class="dep-modal__types">
+            @for (type of typesLien; track type) {
+              <button type="button" class="dep-modal__type-card" [class.dep-modal__type-card--active]="typeLienChoisi() === type" (click)="choisirTypeLien(type)">
+                <span class="dep-modal__type-badge">{{ type }}</span>
+                <span>{{ lienLabels[type].titre }}</span>
+              </button>
+            }
+          </div>
+          <p class="dep-modal__type-hint">{{ lienLabels[typeLienChoisi()].astuce }}</p>
+
+          @if (resumeLien(); as resume) {
+            <div class="dep-modal__preview">
+              <span class="dep-modal__preview-label">Ce qui sera enregistré</span>
+              <p class="dep-modal__preview-phrase">{{ resume.phrase }}</p>
+              <p class="dep-modal__preview-titre">{{ resume.autreTitre }}</p>
+              <div class="dep-modal__preview-fields">
+                <span class="dep-modal__preview-field">id_tache_source = {{ resume.source.code }}</span>
+                <span class="dep-modal__preview-field">id_tache_cible = {{ resume.cible.code }}</span>
+                <span class="dep-modal__preview-field">type_lien = {{ lienLabels[resume.type].code }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="dep-modal__footer">
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="close.emit()">Annuler</button>
+        <button type="button" class="form-modal__btn form-modal__btn--primary" [disabled]="!resumeLien()" (click)="creerLien()">Créer le lien</button>
+      </div>
+    </div>
+  }
+</app-modal>

@@ -1,0 +1,183 @@
+.rail {
+  flex: 0 0 232px;
+  width: 232px;
+  height: 100dvh;
+  position: sticky;
+  top: 0;
+  background: var(--color-rail-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 12px;
+  overflow-y: auto;
+}
+
+.rail__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px 16px;
+}
+
+.rail__logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--color-action);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.rail__brand-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.rail__project {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 11px;
+  margin-bottom: 12px;
+  background: var(--color-rail-hover);
+  border: 1px solid var(--color-rail-border);
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.rail__project-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-rail-text-muted);
+}
+
+.rail__project-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--color-rail-text-muted);
+}
+
+.rail__project-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.rail__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rail__item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 7px;
+  color: var(--color-rail-text-muted);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.rail__item:hover {
+  background: var(--color-rail-hover);
+  color: #ffffff;
+}
+
+.rail__item--active {
+  background: var(--color-rail-hover);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.rail__item-icon {
+  width: 16px;
+  text-align: center;
+  font-size: 12px;
+}
+
+.rail__item-label {
+  flex: 1;
+}
+
+.rail__item-badge {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: var(--color-action);
+  color: #ffffff;
+}
+
+.rail__user {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  border-top: 1px solid var(--color-rail-border);
+}
+
+.rail__user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.rail__user-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rail__user-role {
+  font-size: 11px;
+  color: var(--color-rail-text-muted);
+}
+
+.rail__logout {
+  background: transparent;
+  border: none;
+  color: var(--color-rail-text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.rail__logout:hover {
+  color: #ffffff;
+}
+
+@media (max-width: 900px) {
+  .rail {
+    position: fixed;
+    left: 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 8px 0 24px rgba(15, 23, 41, 0.2);
+  }
+
+  :host(.rail-host--open) .rail {
+    transform: translateX(0);
+  }
+}

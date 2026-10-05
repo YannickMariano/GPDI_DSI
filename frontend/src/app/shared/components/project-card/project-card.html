@@ -1,0 +1,43 @@
+<ng-template #contenu>
+  <div class="project-card__header">
+    <div>
+      <div class="project-card__name">{{ project().nom }}</div>
+      <div class="project-card__direction">{{ project().direction }}</div>
+    </div>
+    <span class="project-card__sante" [style.background]="sante().bg" [style.color]="sante().text">{{ sante().label }}</span>
+  </div>
+
+  <div class="project-card__progress-row">
+    <span>Sprint {{ project().sprintActuelIndex }}/{{ project().sprintTotal }}</span>
+    <span class="project-card__progress-value">{{ project().avancement }} %</span>
+  </div>
+  <app-progress-bar [value]="project().avancement" [color]="sante().border" [ariaLabel]="'Avancement du projet ' + project().nom + ' : ' + project().avancement + ' %'" />
+
+  <div class="project-card__metrics">
+    <div class="project-card__metric">
+      <span class="project-card__metric-value">{{ formatHours(project().heuresConsommees) }}</span>
+      <span class="project-card__metric-label">consommées</span>
+    </div>
+    <div class="project-card__metric">
+      <span class="project-card__metric-value">{{ formatDateFr(project().prochainJalon) }}</span>
+      <span class="project-card__metric-label">prochain jalon</span>
+    </div>
+  </div>
+
+  <div class="project-card__footer">
+    @if (responsable(); as r) {
+      <app-avatar [initiales]="r.initiales" [bg]="r.avatarBg" [nom]="r.nom" [size]="24" />
+      <span class="project-card__responsable">{{ r.nom }}</span>
+    }
+  </div>
+</ng-template>
+
+@if (clickable()) {
+  <a class="project-card__link" [routerLink]="['/projets', project().id, 'apercu']">
+    <ng-container [ngTemplateOutlet]="contenu" />
+  </a>
+} @else {
+  <div class="project-card__link project-card__link--static">
+    <ng-container [ngTemplateOutlet]="contenu" />
+  </div>
+}

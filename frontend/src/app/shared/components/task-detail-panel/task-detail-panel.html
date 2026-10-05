@@ -1,0 +1,244 @@
+<app-side-panel [open]="task() !== undefined" [width]="496" [ariaLabel]="task()?.titre ?? 'Détail de la tâche'" (close)="close.emit()">
+  @if (task(); as t) {
+    <div class="task-detail__header">
+      <span class="task-detail__code">{{ t.code }}</span>
+      <app-status-badge [statut]="t.statut" />
+      <div class="task-detail__spacer"></div>
+      <button type="button" class="task-detail__icon-btn" (click)="close.emit()" aria-label="Fermer le panneau">×</button>
+    </div>
+
+    <div class="task-detail__body">
+      <h2 class="task-detail__title">{{ t.titre }}</h2>
+
+      @if (t.description) {
+        <p class="task-detail__description">{{ t.description }}</p>
+      }
+
+      @if (tacheBloquante(); as bloquante) {
+        <div class="task-detail__alert">
+          <span class="task-detail__alert-icon" aria-hidden="true">!</span>
+          <div>
+            <div class="task-detail__alert-title">Démarrage impossible</div>
+            <div class="task-detail__alert-text">La tâche préalable <strong>{{ bloquante.code }} — {{ bloquante.titre }}</strong> n'est pas terminée.</div>
+            <button type="button" class="task-detail__alert-link" (click)="openTask.emit(bloquante.id)">Ouvrir {{ bloquante.code }}</button>
+          </div>
+        </div>
+      }
+
+      <dl class="task-detail__meta">
+        <dt>Assignés</dt>
+        <dd class="task-detail__assignees">
+          @for (p of assignes(); track p!.id) {
+            <span class="task-detail__assignee-chip">
+              <app-avatar [initiales]="p!.initiales" [bg]="p!.avatarBg" [size]="20" />
+              {{ p!.nom }}
+              @if (peutGererTache()) {
+                <button type="button" class="task-detail__assignee-remove" (click)="retirerAssignation(p!.id)" [attr.aria-label]="'Retirer ' + p!.nom">×</button>
+              }
+            </span>
+          } @empty {
+            <span class="task-detail__assignee-empty">Aucun agent assigné.</span>
+          }
+
+          @if (peutGererTache() && agentsAffectables().length > 0) {
+            <div class="task-detail__assignee-add">
+              <label for="task-detail-assignee-select" class="sr-only">Assigner un agent</label>
+              <select id="task-detail-assignee-select" class="task-detail__assignee-select" [value]="agentAAffecter()" (change)="agentAAffecter.set($any($event.target).value)">
+                <option value="" disabled>Assigner un agent…</option>
+                @for (agent of agentsAffectables(); track agent!.id) {
+                  <option [value]="agent!.id">{{ agent!.nom }}</option>
+                }
+              </select>
+              <button type="button" class="task-detail__assignee-add-btn" [disabled]="!agentAAffecter()" (click)="affecterAgent()">+ Assigner</button>
+            </div>
+          }
+        </dd>
+
+        <dt>Priorité</dt>
+        <dd><app-priority-badge [priorite]="t.priorite" /></dd>
+
+        <dt>Échéance</dt>
+        <dd class="task-detail__mono">{{ formatDateFr(t.echeance) }}</dd>
+
+        <dt>Estimé</dt>
+        <dd class="task-detail__estime">
+          <span class="task-detail__mono">{{ formatHours(t.estimeHeures) }}</span>
+          <span aria-hidden="true">·</span>
+          <span>passé <strong class="task-detail__mono">{{ formatHms(tempsPasseLive()) }}</strong>{{ t.demarreeLe ? ' (en cours)' : '' }}</span>
+          <app-progress-bar
+            [value]="(tempsPasseLive() / t.estimeHeures) * 100"
+            color="var(--color-success)"
+            [ariaLabel]="'Temps passé : ' + formatHms(tempsPasseLive()) + ' sur ' + formatHours(t.estimeHeures) + ' estimées'"
+          />
+        </dd>
+      </dl>
+
+      <div class="task-detail__section">
+        <div class="task-detail__section-header">
+          <span>Dépendances</span>
+          @if (totalDependances() > 0) {
+            <span class="task-detail__dep-count">{{ totalDependances() }}</span>
+          }
+          <div class="task-detail__spacer"></div>
+          @if (peutGererTache()) {
+            <button type="button" class="task-detail__dep-link-btn" (click)="ouvrirLienModal()">+ Lier une tâche</button>
+          }
+        </div>
+
+        @if (bloquePar().length > 0) {
+          <div class="task-detail__dep-group">
+            <span class="task-detail__dep-heading task-detail__dep-heading--alert">↑ Cette tâche est bloquée par</span>
+            @for (item of bloquePar(); track item.dep.id) {
+              <div class="task-detail__dep-row" [class.task-detail__dep-row--active]="item.tache.statut !== 'terminee' && item.tache.statut !== 'reportee'">
+                <span class="task-detail__dep-type">{{ item.dep.typeLien }}</span>
+                <span class="task-detail__mono task-detail__subtask-code">{{ item.tache.code }}</span>
+                <span class="task-detail__subtask-title">{{ item.tache.titre }}</span>
+                <app-status-badge [statut]="item.tache.statut" />
+                @if (peutGererTache()) {
+                  <button type="button" class="task-detail__subtask-remove" (click)="supprimerDependance(item.dep.id)" [attr.aria-label]="'Retirer la dépendance avec ' + item.tache.code">×</button>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        @if (bloque().length > 0) {
+          <div class="task-detail__dep-group">
+            <span class="task-detail__dep-heading">↓ Cette tâche bloque</span>
+            @for (item of bloque(); track item.dep.id) {
+              <div class="task-detail__dep-row">
+                <span class="task-detail__dep-type">{{ item.dep.typeLien }}</span>
+                <span class="task-detail__mono task-detail__subtask-code">{{ item.tache.code }}</span>
+                <span class="task-detail__subtask-title">{{ item.tache.titre }}</span>
+                <app-status-badge [statut]="item.tache.statut" />
+                @if (peutGererTache()) {
+                  <button type="button" class="task-detail__subtask-remove" (click)="supprimerDependance(item.dep.id)" [attr.aria-label]="'Retirer la dépendance avec ' + item.tache.code">×</button>
+                }
+              </div>
+            }
+          </div>
+        }
+
+        @if (totalDependances() === 0) {
+          <p class="task-detail__subtask-empty">Aucune dépendance pour le moment.</p>
+        }
+      </div>
+
+      <div class="task-detail__section">
+        <div class="task-detail__section-header">
+          <span>Sous-tâches</span>
+          @if (t.sousTaches.length > 0) {
+            <span class="task-detail__mono">{{ sousTachesFaites() }} / {{ t.sousTaches.length }}</span>
+          }
+        </div>
+
+        @if (peutGererTache()) {
+          <div class="task-detail__subtask-add">
+            <label for="task-detail-new-subtask" class="sr-only">Ajouter une sous-tâche</label>
+            <input
+              id="task-detail-new-subtask"
+              type="text"
+              class="task-detail__subtask-add-input"
+              placeholder="Ajouter une sous-tâche…"
+              [value]="nouvelleSousTache()"
+              (input)="nouvelleSousTache.set($any($event.target).value)"
+              (keydown.enter)="ajouterSousTache()"
+            />
+            <button type="button" class="task-detail__subtask-add-btn" [disabled]="!nouvelleSousTache().trim()" (click)="ajouterSousTache()">+ Ajouter</button>
+          </div>
+        }
+
+        @if (t.sousTaches.length > 0) {
+          <div class="task-detail__subtasks">
+            @for (st of t.sousTaches; track st.id) {
+              <ng-template #sousTacheContenu>
+                <span class="task-detail__subtask-check" [class.task-detail__subtask-check--done]="st.fait">{{ st.fait ? '✓' : '' }}</span>
+                <span class="task-detail__mono task-detail__subtask-code">{{ st.code }}</span>
+                <span class="task-detail__subtask-title" [class.task-detail__subtask-title--done]="st.fait">{{ st.titre }}</span>
+                @if (personne(st.personneId); as p) {
+                  <app-avatar [initiales]="p.initiales" [bg]="p.avatarBg" [size]="20" />
+                }
+              </ng-template>
+              <div class="task-detail__subtask-row">
+                @if (peutGererTache()) {
+                  <button type="button" class="task-detail__subtask" (click)="toggleSousTache(st.id)">
+                    <ng-container [ngTemplateOutlet]="sousTacheContenu" />
+                  </button>
+                } @else {
+                  <div class="task-detail__subtask task-detail__subtask--static">
+                    <ng-container [ngTemplateOutlet]="sousTacheContenu" />
+                  </div>
+                }
+                @if (peutGererTache()) {
+                  <button type="button" class="task-detail__subtask-remove" (click)="supprimerSousTache(st.id)" [attr.aria-label]="'Supprimer la sous-tâche ' + st.titre">×</button>
+                }
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="task-detail__subtask-empty">Aucune sous-tâche pour le moment.</p>
+        }
+      </div>
+
+      <div class="task-detail__section">
+        <span class="task-detail__section-title">Activité</span>
+        <div class="task-detail__activity">
+          @for (a of t.activite; track a.id) {
+            <div class="task-detail__activity-item">
+              @if (personne(a.personneId); as p) {
+                <app-avatar [initiales]="p.initiales" [bg]="p.avatarBg" [size]="26" />
+              } @else {
+                <app-avatar initiales="◌" bg="#98a2b3" [size]="26" />
+              }
+              <div>
+                <div class="task-detail__activity-head">
+                  <strong>{{ personneNom(a.personneId) }}</strong>
+                  <span class="task-detail__mono">{{ a.quand | relativeTime }}</span>
+                </div>
+                @if (a.texte) {
+                  <div class="task-detail__activity-text" [class.task-detail__activity-text--systeme]="a.type === 'systeme'">{{ a.texte }}</div>
+                }
+                @if (a.pieceJointe; as pj) {
+                  <button type="button" class="task-detail__attachment" (click)="telechargerPieceJointe(a)">
+                    <span class="task-detail__attachment-icon" aria-hidden="true">📎</span>
+                    <span class="task-detail__attachment-nom">{{ pj.nomFichier }}</span>
+                    <span class="task-detail__attachment-taille">{{ formatTaille(pj.taille) }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="task-detail__footer">
+      @if (fichierSelectionne(); as fichier) {
+        <div class="task-detail__attachment-preview">
+          <span class="task-detail__attachment-icon" aria-hidden="true">📎</span>
+          <span class="task-detail__attachment-nom">{{ fichier.name }}</span>
+          <button type="button" class="task-detail__attachment-remove" (click)="retirerFichierSelectionne()" aria-label="Retirer le fichier">×</button>
+        </div>
+      }
+      <div class="task-detail__footer-row">
+        <label for="task-detail-comment" class="sr-only">Commenter ou saisir du temps</label>
+        <input
+          id="task-detail-comment"
+          type="text"
+          class="task-detail__input"
+          placeholder="Commenter ou saisir du temps…"
+          [value]="commentaire()"
+          (input)="commentaire.set($any($event.target).value)"
+          (keydown.enter)="envoyer()"
+        />
+        <label class="task-detail__attach-btn" aria-label="Joindre un fichier">
+          📎
+          <input type="file" class="sr-only" (change)="selectionnerFichier($event)" />
+        </label>
+        <button type="button" class="task-detail__send" (click)="envoyer()">Envoyer</button>
+      </div>
+    </div>
+
+    <app-task-link-modal [open]="modalLienOuvert()" [taskId]="t.id" (close)="fermerLienModal()" />
+  }
+</app-side-panel>

@@ -1,0 +1,53 @@
+.portfolio {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+
+.portfolio__header h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.portfolio__header p {
+  margin: 4px 0 0;
+  font-size: 13.5px;
+  color: var(--color-text-tertiary);
+}
+
+.portfolio__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.portfolio__chip {
+  padding: 7px 13px;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.portfolio__chip:hover {
+  background: var(--color-surface-muted);
+}
+
+.portfolio__chip--active {
+  border-color: var(--color-action);
+  background: var(--color-action-bg);
+  color: var(--color-action);
+  font-weight: 600;
+}
+
+.portfolio__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}

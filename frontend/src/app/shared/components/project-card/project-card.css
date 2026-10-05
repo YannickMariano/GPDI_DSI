@@ -1,0 +1,100 @@
+:host {
+  display: block;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 3px solid var(--color-border);
+  border-radius: var(--radius-card);
+  min-width: 300px;
+}
+
+.project-card__link {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.project-card__link--static {
+  cursor: default;
+}
+
+.project-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.project-card__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink);
+  line-height: 1.35;
+}
+
+.project-card__direction {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+.project-card__sante {
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.project-card__progress-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.project-card__progress-value {
+  font-family: var(--font-mono);
+  color: var(--color-ink);
+  font-weight: 500;
+}
+
+.project-card__metrics {
+  display: flex;
+  gap: 18px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-surface-alt);
+}
+
+.project-card__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.project-card__metric-value {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.project-card__metric-label {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+}
+
+.project-card__footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.project-card__responsable {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}

@@ -1,0 +1,168 @@
+<div class="my-projects">
+  <header class="my-projects__header">
+    <div>
+      <h1>Mes projets</h1>
+      <p>{{ projetsFiltres().length }} projet(s)</p>
+    </div>
+    @if (peutGererProjets()) {
+      <button type="button" class="my-projects__create-btn" (click)="ouvrirCreation()">+ Créer un projet</button>
+    }
+  </header>
+
+  <div class="my-projects__toolbar">
+    <app-search-bar placeholder="Rechercher un projet par nom…" [(value)]="recherche" />
+
+    <select class="my-projects__select" [value]="prioriteFiltre()" (change)="prioriteFiltre.set($any($event.target).value)" aria-label="Filtrer par priorité">
+      <option value="toutes">Toutes priorités</option>
+      @for (p of prioritesDisponibles; track p) {
+        <option [value]="p">{{ prioriteLabel[p] }}</option>
+      }
+    </select>
+
+    <select class="my-projects__select" [value]="statutFiltre()" (change)="statutFiltre.set($any($event.target).value)" aria-label="Filtrer par statut">
+      <option value="tous">Tous statuts</option>
+      @for (s of statutsDisponibles; track s) {
+        <option [value]="s">{{ statutStyle[s].label }}</option>
+      }
+    </select>
+  </div>
+
+  @if (projetsFiltres().length > 0) {
+    <div class="my-projects__grid">
+      @for (projet of projetsFiltres(); track projet.id) {
+        <div class="my-projects__card-wrap" [class.my-projects__card-wrap--archived]="estArchive(projet)">
+          <app-project-card [project]="projet" [responsable]="responsable(projet.responsableId)" />
+          <div class="my-projects__card-footer">
+            <div class="my-projects__card-meta">
+              <app-priority-badge [priorite]="projet.priorite" />
+              <span class="my-projects__statut-pill" [style.background]="statutStyle[projet.statut].bg" [style.color]="statutStyle[projet.statut].text">
+                {{ statutStyle[projet.statut].label }}
+              </span>
+            </div>
+            @if (estArchive(projet)) {
+              <span class="my-projects__readonly-note">Projet archivé — lecture seule, modification impossible.</span>
+            } @else if (peutGererProjets()) {
+              <div class="my-projects__card-actions">
+                <button type="button" class="my-projects__card-action" (click)="ouvrirModification(projet)">Modifier</button>
+                @if (peutSuspendre(projet)) {
+                  <button type="button" class="my-projects__card-action" (click)="demanderSuspension(projet)">Suspendre</button>
+                }
+                @if (peutCloturer(projet)) {
+                  <button type="button" class="my-projects__card-action" (click)="demanderCloture(projet)">Clôturer</button>
+                }
+                <button type="button" class="my-projects__card-action my-projects__card-action--danger" (click)="demanderArchivage(projet)">Archiver</button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <app-empty-state icon="▤" title="Aucun projet ne correspond à ces filtres" />
+  }
+
+  <app-modal [open]="modalOuvert()" [width]="480" [ariaLabel]="modeEdition() ? 'Modifier un projet' : 'Créer un projet'" (close)="fermerModal()">
+    <form class="form-modal" [formGroup]="form" (ngSubmit)="enregistrerProjet()" novalidate>
+      <div class="form-modal__header">
+        <h2>{{ modeEdition() ? 'Modifier le projet' : 'Créer un projet' }}</h2>
+        <button type="button" class="form-modal__close" (click)="fermerModal()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        <div class="field">
+          <label class="field__label" for="pjNom">Intitulé du projet</label>
+          <input id="pjNom" type="text" class="input" formControlName="nom" [class.input--invalid]="form.controls.nom.invalid && form.controls.nom.touched" />
+          @if (form.controls.nom.invalid && form.controls.nom.touched) {
+            <span class="field__error">L'intitulé du projet est requis.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="pjDescription">Description</label>
+          <textarea id="pjDescription" class="input" rows="3" formControlName="description" placeholder="Objectif et périmètre du projet" [class.input--invalid]="form.controls.description.invalid && form.controls.description.touched"></textarea>
+          @if (form.controls.description.invalid && form.controls.description.touched) {
+            <span class="field__error">La description du projet est requise.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="pjResponsable">Chef de projet</label>
+          <select id="pjResponsable" class="select" formControlName="responsableId" [class.input--invalid]="form.controls.responsableId.invalid && form.controls.responsableId.touched">
+            <option value="" disabled>Sélectionner un chef de projet</option>
+            @for (chef of chefsDisponibles(); track chef.id) {
+              <option [value]="chef.id">{{ chef.nom }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field">
+          <span class="field__label" id="pjPrioriteLabel">Priorité</span>
+          <div class="my-projects__priorite-options" role="radiogroup" aria-labelledby="pjPrioriteLabel">
+            @for (p of prioritesDisponibles; track p) {
+              <label class="my-projects__priorite-option" [class.my-projects__priorite-option--active]="form.controls.priorite.value === p">
+                <input type="radio" name="priorite" [value]="p" formControlName="priorite" />
+                {{ prioriteLabel[p] }}
+              </label>
+            }
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="pjEquipe">Équipe affectée</label>
+          <select id="pjEquipe" class="select" formControlName="equipeId">
+            <option value="">Aucune — à affecter plus tard</option>
+            @for (equipe of equipesDisponibles(); track equipe.id) {
+              <option [value]="equipe.id">{{ equipe.nom }}</option>
+            }
+          </select>
+          <span class="field__hint">Les membres de l'équipe choisie seront automatiquement rattachés au projet.</span>
+        </div>
+
+        <div class="form-modal__row">
+          <div class="field">
+            <label class="field__label" for="pjDebut">Date de début</label>
+            <input id="pjDebut" type="date" class="input" formControlName="dateDebut" [class.input--invalid]="form.controls.dateDebut.invalid && form.controls.dateDebut.touched" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="pjFin">Date de fin cible</label>
+            <input id="pjFin" type="date" class="input" formControlName="dateFin" [class.input--invalid]="form.controls.dateFin.invalid && form.controls.dateFin.touched" />
+          </div>
+        </div>
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">À la création, le projet est en statut « En préparation » et le code projet est attribué automatiquement.</span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerModal()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">{{ modeEdition() ? 'Modifier' : 'Créer' }}</button>
+      </div>
+    </form>
+  </app-modal>
+
+  <app-confirmation-dialog
+    [open]="projetAArchiver() !== null"
+    title="Archiver le projet"
+    [message]="'Archiver « ' + (projetAArchiver()?.nom ?? '') + ' » ? Le projet passera au statut Archivé.'"
+    confirmLabel="Archiver"
+    [destructive]="true"
+    (confirm)="confirmerArchivage()"
+    (cancel)="annulerArchivage()"
+  />
+
+  <app-confirmation-dialog
+    [open]="projetASuspendre() !== null"
+    title="Suspendre le projet"
+    [message]="'Suspendre « ' + (projetASuspendre()?.nom ?? '') + ' » ? Le projet passera au statut Suspendu jusqu\'à sa reprise.'"
+    confirmLabel="Suspendre"
+    (confirm)="confirmerSuspension()"
+    (cancel)="annulerSuspension()"
+  />
+
+  <app-confirmation-dialog
+    [open]="projetACloturer() !== null"
+    title="Clôturer le projet"
+    [message]="'Clôturer « ' + (projetACloturer()?.nom ?? '') + ' » ? Le projet passera au statut Clôturé.'"
+    confirmLabel="Clôturer"
+    (confirm)="confirmerCloture()"
+    (cancel)="annulerCloture()"
+  />
+</div>

@@ -1,0 +1,180 @@
+<div class="overview">
+  <div class="overview__kpis">
+    <app-kpi-card label="Tâches ouvertes" [value]="tachesOuvertes()" />
+    <app-kpi-card label="Charge consommée" [value]="chargeConsommee()" unite="%" />
+    <app-kpi-card label="Jalons tenus" [value]="jalonsTenusPct()" unite="%" />
+    <app-kpi-card label="Membres actifs" [value]="workload().length" />
+  </div>
+
+  <div class="overview__grid">
+    <div class="overview__main">
+      <section class="overview__panel">
+        <h2>Burndown — Sprint en cours</h2>
+        @if (sprintEnCours() && burndown().length > 0) {
+          <div class="burndown">
+            @for (point of burndown(); track point.jour) {
+              <div class="burndown__col">
+                <div class="burndown__bar-wrap">
+                  <div class="burndown__bar" [class.burndown__bar--futur]="point.futur" [style.height.%]="(point.restant / maxBurndown()) * 100"></div>
+                  <div class="burndown__ideal-tick" [style.bottom.%]="(point.ideal / maxBurndown()) * 100"></div>
+                </div>
+                <span class="burndown__label">{{ point.jour }}</span>
+              </div>
+            }
+          </div>
+          <div class="burndown__legend">
+            <span><span class="burndown__legend-swatch burndown__legend-swatch--reel"></span>Réel</span>
+            <span><span class="burndown__legend-swatch burndown__legend-swatch--ideal"></span>Idéal</span>
+          </div>
+        } @else {
+          <app-empty-state icon="◱" title="Aucun sprint en cours" />
+        }
+      </section>
+
+      <section class="overview__panel">
+        <div class="overview__panel-header">
+          <h2>Prochains jalons</h2>
+          <a [routerLink]="['/projets', projectId(), 'jalons']">Tout voir</a>
+        </div>
+        @if (prochainsJalons().length > 0) {
+          <ul class="milestone-preview-list">
+            @for (jalon of prochainsJalons(); track jalon.id) {
+              <li class="milestone-preview-list__item">
+                <span class="milestone-preview-list__dot" [class.milestone-preview-list__dot--risque]="jalon.statut === 'a_risque'"></span>
+                <div class="milestone-preview-list__body">
+                  <span class="milestone-preview-list__name">{{ jalon.nom }}</span>
+                  <span class="milestone-preview-list__meta">{{ livrablesRestants(jalon) }} livrable(s) restant(s)</span>
+                </div>
+                <span class="milestone-preview-list__date">{{ formatDateFr(jalon.date) }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <app-empty-state icon="◆" title="Aucun jalon à venir" />
+        }
+      </section>
+    </div>
+
+    <div class="overview__side">
+      <section class="overview__panel">
+        <h2>Charge de l'équipe</h2>
+        @if (workload().length > 0) {
+          <ul class="team-load-list">
+            @for (member of workload(); track member.person.id) {
+              <li class="team-load-list__item">
+                <app-avatar [initiales]="member.person.initiales" [bg]="member.person.avatarBg" [nom]="member.person.nom" [size]="26" />
+                <div class="team-load-list__body">
+                  <div class="team-load-list__row">
+                    <span>{{ member.person.nom }}</span>
+                    <span [style.color]="etatCharge(member.chargePct).text">{{ member.chargePct }} %</span>
+                  </div>
+                  <app-progress-bar
+                    [value]="member.chargePct"
+                    [color]="etatCharge(member.chargePct).text"
+                    [ariaLabel]="'Charge de ' + member.person.nom + ' : ' + member.chargePct + ' %'"
+                  />
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <app-empty-state icon="◫" title="Aucune charge affectée" />
+        }
+      </section>
+
+      <section class="overview__panel">
+        <div class="overview__panel-header">
+          <h2>Points d'information client</h2>
+          @if (peutPublier()) {
+            <button type="button" class="overview__publish-btn" (click)="ouvrirPublication()">Publier</button>
+          }
+        </div>
+        @if (pointsInformation().length > 0) {
+          <ul class="activity-list">
+            @for (point of pointsInformation(); track point.id) {
+              <li class="activity-list__item">
+                <div class="activity-list__body">
+                  <div class="activity-list__row">
+                    <strong>{{ point.titre }}</strong>
+                    <span>{{ formatDateFr(point.date) }}</span>
+                  </div>
+                  <p>{{ point.corps }}</p>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <app-empty-state icon="▦" title="Aucun point d'information publié" [description]="peutPublier() ? 'Publiez-en un pour informer le client de l\'avancement.' : undefined" />
+        }
+      </section>
+
+      <section class="overview__panel">
+        <h2>Activité récente</h2>
+        @if (activiteRecente().length > 0) {
+          <ul class="activity-list">
+            @for (item of activiteRecente(); track item.id) {
+              <li class="activity-list__item">
+                <app-avatar [initiales]="auteurInitiales(item.personneId)?.initiales ?? '·'" [bg]="auteurInitiales(item.personneId)?.avatarBg ?? '#98a2b3'" [size]="24" />
+                <div class="activity-list__body">
+                  <div class="activity-list__row">
+                    <strong>{{ auteurNom(item.personneId) }}</strong>
+                    <span>{{ item.quand | relativeTime }}</span>
+                  </div>
+                  <p [class.activity-list__text--systeme]="item.type === 'systeme'">{{ item.tacheCode }} — {{ item.texte }}</p>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <app-empty-state icon="◔" title="Aucune activité récente" />
+        }
+      </section>
+    </div>
+  </div>
+
+  <app-modal [open]="modalPublicationOuvert()" [width]="460" ariaLabel="Publier un point d'information" (close)="fermerPublication()">
+    <form class="form-modal" [formGroup]="formPublication" (ngSubmit)="confirmerPublication()" novalidate>
+      <div class="form-modal__header">
+        <h2>Publier un point d'information</h2>
+        <button type="button" class="form-modal__close" (click)="fermerPublication()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        <div class="field">
+          <label class="field__label" for="piTitre">Titre</label>
+          <input
+            id="piTitre"
+            type="text"
+            class="input"
+            formControlName="titre"
+            [class.input--invalid]="formPublication.controls.titre.invalid && formPublication.controls.titre.touched"
+          />
+          @if (formPublication.controls.titre.invalid && formPublication.controls.titre.touched) {
+            <span class="field__error">Le titre est requis.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="piCorps">Message</label>
+          <textarea
+            id="piCorps"
+            class="input"
+            rows="4"
+            formControlName="corps"
+            placeholder="Ce que le client doit savoir sur l'avancement du projet…"
+            [class.input--invalid]="formPublication.controls.corps.invalid && formPublication.controls.corps.touched"
+          ></textarea>
+          @if (formPublication.controls.corps.invalid && formPublication.controls.corps.touched) {
+            <span class="field__error">Le message est requis.</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">Visible immédiatement par les comptes clients partagés sur ce projet.</span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerPublication()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">Publier</button>
+      </div>
+    </form>
+  </app-modal>
+</div>

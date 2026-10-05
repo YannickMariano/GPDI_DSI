@@ -1,0 +1,178 @@
+package mg.gov.mef.dsi.gpdi.client;
+
+import lombok.RequiredArgsConstructor;
+import mg.gov.mef.dsi.gpdi.exception.KeycloakIndisponibleException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Client d'administration Keycloak (creation/suppression de comptes), via un client technique
+ * dedie en flux Client Credentials — distinct du client applicatif (gpdi-client-id) utilise pour
+ * l'authentification des utilisateurs (cf. §4.7 du guide backend, "appel technique service-a-service").
+ * <p>
+ * Tant que ce client technique n'est pas configure (KEYCLOAK_ADMIN_CLIENT_ID absent), le
+ * provisioning est ignore avec un simple avertissement : la creation de l'utilisateur cote GPDI
+ * reste possible, il faut alors creer le compte Keycloak manuellement.
+ */
+@Component
+@RequiredArgsConstructor
+public class KeycloakAdminClient {
+
+    private static final Logger log = LoggerFactory.getLogger(KeycloakAdminClient.class);
+
+    private final RestTemplate restTemplate;
+
+    @Value("${dsi.gpdi.keycloak.admin-base-url}")
+    private String baseUrl;
+
+    @Value("${dsi.gpdi.keycloak.realm}")
+    private String realm;
+
+    @Value("${dsi.gpdi.keycloak.admin-client-id}")
+    private String adminClientId;
+
+    @Value("${dsi.gpdi.keycloak.admin-client-secret}")
+    private String adminClientSecret;
+
+    public boolean estConfigure() {
+        return StringUtils.hasText(adminClientId) && StringUtils.hasText(adminClientSecret);
+    }
+
+    /**
+     * Cree le compte Keycloak d'un utilisateur GPDI. Le nom d'utilisateur Keycloak est toujours
+     * le matricule (cf. UtilisateurCourantService, qui resout l'utilisateur courant par
+     * preferred_username = matricule).
+     */
+    public void creerUtilisateur(String matricule, String motDePasseClair, String email, String prenom, String nom) {
+        if (!estConfigure()) {
+            log.warn("Provisioning Keycloak non configure (KEYCLOAK_ADMIN_CLIENT_ID absent) : "
+                    + "le compte Keycloak du matricule {} devra etre cree manuellement.", matricule);
+            return;
+        }
+
+        try {
+            String jeton = obtenirJetonAdmin();
+
+            Map<String, Object> identifiants = new HashMap<>();
+            identifiants.put("type", "password");
+            identifiants.put("value", motDePasseClair);
+            identifiants.put("temporary", false);
+
+            Map<String, Object> corps = new HashMap<>();
+            corps.put("username", matricule);
+            corps.put("enabled", true);
+            corps.put("email", email);
+            corps.put("firstName", prenom);
+            corps.put("lastName", nom);
+            corps.put("credentials", Collections.singletonList(identifiants));
+
+            restTemplate.postForEntity(baseUrl + "/admin/realms/" + realm + "/users",
+                    new HttpEntity<>(corps, enteteAvecJeton(jeton)), Void.class);
+            log.info("Compte Keycloak cree pour le matricule {}", matricule);
+        } catch (RestClientException e) {
+            throw new KeycloakIndisponibleException(
+                    "Le compte GPDI n'a pas pu être créé : le service d'authentification Keycloak a refusé ou n'a pas pu traiter la demande.", e);
+        }
+    }
+
+    /** Suppression best-effort : ne bloque jamais la suppression cote GPDI, journalise seulement en cas d'echec. */
+    public void supprimerUtilisateur(String matricule) {
+        if (!estConfigure()) return;
+        try {
+            String jeton = obtenirJetonAdmin();
+            String idKeycloak = rechercherIdParMatricule(matricule, jeton);
+            if (idKeycloak == null) {
+                log.warn("Aucun compte Keycloak trouve pour le matricule {} (suppression ignoree)", matricule);
+                return;
+            }
+            restTemplate.exchange(baseUrl + "/admin/realms/" + realm + "/users/" + idKeycloak,
+                    HttpMethod.DELETE, new HttpEntity<>(enteteAvecJeton(jeton)), Void.class);
+            log.info("Compte Keycloak supprime pour le matricule {}", matricule);
+        } catch (RestClientException e) {
+            log.warn("Echec de la suppression du compte Keycloak pour le matricule {} : {}", matricule, e.getMessage());
+        }
+    }
+
+    /**
+     * Recupere les derniers evenements de connexion journalises par Keycloak (LOGIN, LOGIN_ERROR,
+     * LOGOUT...). Necessite que la journalisation des evenements soit activee sur le realm
+     * (Realm settings > Events > User events settings > Save events). Renvoie une liste vide si
+     * le provisioning n'est pas configure ou si l'appel echoue (le journal reste un outil de
+     * consultation : son indisponibilite ne doit jamais faire echouer le reste de l'application).
+     */
+    public List<Map<String, Object>> obtenirEvenementsConnexion(int max) {
+        if (!estConfigure()) {
+            log.warn("Provisioning Keycloak non configure : journal des connexions indisponible.");
+            return Collections.emptyList();
+        }
+        try {
+            String jeton = obtenirJetonAdmin();
+            String url = baseUrl + "/admin/realms/" + realm + "/events?max=" + max
+                    + "&type=LOGIN&type=LOGIN_ERROR&type=LOGOUT&type=LOGOUT_ERROR";
+            ResponseEntity<List<Map<String, Object>>> reponse = restTemplate.exchange(
+                    url, HttpMethod.GET, new HttpEntity<>(enteteAvecJeton(jeton)),
+                    new ParameterizedTypeReference<List<Map<String, Object>>>() { });
+            List<Map<String, Object>> resultats = reponse.getBody();
+            return resultats == null ? Collections.emptyList() : resultats;
+        } catch (RestClientException e) {
+            log.warn("Echec de la lecture du journal des connexions Keycloak : {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
+    private String rechercherIdParMatricule(String matricule, String jeton) {
+        ResponseEntity<List<Map<String, Object>>> reponse = restTemplate.exchange(
+                baseUrl + "/admin/realms/" + realm + "/users?username=" + matricule + "&exact=true",
+                HttpMethod.GET, new HttpEntity<>(enteteAvecJeton(jeton)),
+                new ParameterizedTypeReference<List<Map<String, Object>>>() { });
+        List<Map<String, Object>> resultats = reponse.getBody();
+        if (resultats == null || resultats.isEmpty()) return null;
+        return String.valueOf(resultats.get(0).get("id"));
+    }
+
+    private String obtenirJetonAdmin() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, String> corps = new LinkedMultiValueMap<>();
+        corps.add("grant_type", "client_credentials");
+        corps.add("client_id", adminClientId);
+        corps.add("client_secret", adminClientSecret);
+
+        ResponseEntity<Map<String, Object>> reponse = restTemplate.exchange(
+                baseUrl + "/realms/" + realm + "/protocol/openid-connect/token",
+                HttpMethod.POST, new HttpEntity<>(corps, headers),
+                new ParameterizedTypeReference<Map<String, Object>>() { });
+
+        Map<String, Object> corpsReponse = reponse.getBody();
+        if (corpsReponse == null || corpsReponse.get("access_token") == null) {
+            throw new KeycloakIndisponibleException("Jeton d'administration Keycloak non obtenu.");
+        }
+        return String.valueOf(corpsReponse.get("access_token"));
+    }
+
+    private HttpHeaders enteteAvecJeton(String jeton) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(jeton);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        return headers;
+    }
+}

@@ -1,0 +1,205 @@
+<div class="backlog">
+  <header class="backlog__header">
+    <div>
+      <h1>Backlog &amp; planification</h1>
+      <p>Glissez une tâche du backlog vers un sprint pour la planifier.</p>
+    </div>
+    <div class="backlog__actions">
+      <button type="button" class="backlog__ai-btn" (click)="suggererRepartition()">
+        <app-ai-suggestion-chip>Suggérer une répartition</app-ai-suggestion-chip>
+      </button>
+      @if (peutGererSprints()) {
+        <button type="button" class="backlog__create-btn" (click)="ouvrirCreationSprint()">+ Créer un sprint</button>
+      }
+    </div>
+  </header>
+
+  <div class="backlog__columns">
+    <section class="backlog__panel" (dragover)="$event.preventDefault()" (drop)="onDrop(undefined)">
+      <div class="backlog__panel-header">
+        <h2>Backlog</h2>
+        <span class="backlog__meta">{{ backlog().length }} tâches · {{ backlogHeures() }} h estimées</span>
+      </div>
+
+      @if (backlog().length > 0) {
+        <div class="backlog__list">
+          @for (task of backlog(); track task.id) {
+            <div class="backlog__row" draggable="true" (dragstart)="onDragStart(task.id)">
+              <span class="backlog__drag-handle" aria-hidden="true">⠿</span>
+              <span class="backlog__code">{{ task.code }}</span>
+              <span class="backlog__title">{{ task.titre }}</span>
+              <app-priority-badge [priorite]="task.priorite" />
+              <span class="backlog__points">{{ task.estimeHeures }} h</span>
+            </div>
+          }
+        </div>
+      } @else {
+        <app-empty-state icon="✓" title="Backlog vide" description="Toutes les tâches sont planifiées dans un sprint." />
+      }
+    </section>
+
+    <section class="backlog__panel">
+      <div class="backlog__panel-header">
+        <h2>Sprints</h2>
+      </div>
+
+      @if (sprintsAffiches().length > 0) {
+        <div class="backlog__sprints">
+          @for (sprint of sprintsAffiches(); track sprint.id) {
+            <div class="sprint-card" (dragover)="sprint.statut !== 'cloture' && $event.preventDefault()" (drop)="sprint.statut !== 'cloture' && onDrop(sprint.id)">
+              <div class="sprint-card__header">
+                <span class="sprint-card__name">{{ sprint.nom }}</span>
+                <span class="sprint-card__status">{{ sprint.statut === 'en_cours' ? 'En cours' : sprint.statut === 'cloture' ? 'Clôturé' : 'Planifié' }}</span>
+              </div>
+              <div class="sprint-card__dates">{{ formatDateFr(sprint.dateDebut) }} → {{ formatDateFr(sprint.dateFin) }}</div>
+              <p class="sprint-card__objectif">{{ sprint.objectif }}</p>
+              <app-progress-bar [value]="tachesSprint(sprint.id).length > 0 ? (tachesTermineesSprint(sprint.id) / tachesSprint(sprint.id).length) * 100 : 0" color="var(--color-success)" />
+              <span class="sprint-card__charge">{{ tachesTermineesSprint(sprint.id) }} / {{ tachesSprint(sprint.id).length }} tâches</span>
+
+              @if (tachesSprint(sprint.id).length === 0 && sprint.statut !== 'cloture') {
+                <div class="sprint-card__dropzone">Déposer les tâches ici.</div>
+              }
+
+              <button type="button" class="sprint-card__toggle" (click)="toggleExpansion(sprint.id)">
+                {{ estEtendu(sprint.id) ? 'Voir moins' : 'Voir plus' }}
+              </button>
+
+              @if (estEtendu(sprint.id)) {
+                <div class="sprint-card__tasks">
+                  @for (task of tachesSprint(sprint.id); track task.id) {
+                    <div class="sprint-card__task-row">
+                      <span class="sprint-card__task-code">{{ task.code }}</span>
+                      <span class="sprint-card__task-title">{{ task.titre }}</span>
+                      <app-priority-badge [priorite]="task.priorite" />
+                      <app-status-badge [statut]="task.statut" />
+                      @if (peutGererSprints() && sprint.statut !== 'cloture') {
+                        <button
+                          type="button"
+                          class="sprint-card__task-remove"
+                          (click)="retirerDuSprint(task.id, task.code)"
+                          [attr.aria-label]="'Retirer ' + task.code + ' du sprint et la remettre dans le backlog'"
+                        >
+                          ×
+                        </button>
+                      }
+                    </div>
+                  } @empty {
+                    <p class="sprint-card__tasks-empty">Aucune tâche dans ce sprint.</p>
+                  }
+                </div>
+
+                @if (peutGererSprints()) {
+                  @if (sprint.statut === 'cloture') {
+                    <div class="sprint-card__actions">
+                      <span class="sprint-card__closed-label">Clôturé</span>
+                    </div>
+                  } @else {
+                    <div class="sprint-card__actions">
+                      <button type="button" class="sprint-card__action" (click)="ouvrirModificationSprint(sprint)">Modifier</button>
+                      @if (peutDemarrer(sprint)) {
+                        <button type="button" class="sprint-card__action" (click)="demarrerSprint(sprint)">Commencer</button>
+                      }
+                      @if (sprint.statut === 'en_cours') {
+                        <button
+                          type="button"
+                          class="sprint-card__action sprint-card__action--danger"
+                          [disabled]="!peutCloturer(sprint)"
+                          (click)="demanderClotureSprint(sprint)"
+                        >
+                          Clôturer
+                        </button>
+                        @if (!peutCloturer(sprint)) {
+                          <span class="sprint-card__hint">Toutes les tâches doivent être terminées ou reportées pour clôturer le sprint.</span>
+                        }
+                      }
+                    </div>
+                  }
+                }
+              }
+            </div>
+          }
+        </div>
+      } @else {
+        <app-empty-state
+          icon="◫"
+          title="Aucun sprint planifié"
+          description="Créez un sprint pour commencer à répartir le backlog."
+          [actionLabel]="peutGererSprints() ? 'Créer un sprint' : undefined"
+          (action)="ouvrirCreationSprint()"
+        />
+      }
+    </section>
+  </div>
+
+  <app-modal [open]="modalOuvert()" [width]="440" [ariaLabel]="modeEditionSprint() ? 'Modifier le sprint' : 'Créer un sprint'" (close)="fermerCreationSprint()">
+    <form class="form-modal" [formGroup]="form" (ngSubmit)="enregistrerSprint()" novalidate>
+      <div class="form-modal__header">
+        <h2>{{ modeEditionSprint() ? 'Modifier le sprint' : 'Créer un sprint' }}</h2>
+        <button type="button" class="form-modal__close" (click)="fermerCreationSprint()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        <div class="field">
+          <label class="field__label" for="spNom">Nom du sprint</label>
+          <input id="spNom" type="text" class="input" formControlName="nom" [class.input--invalid]="form.controls.nom.invalid && form.controls.nom.touched" />
+        </div>
+
+        <div class="form-modal__row">
+          <div class="field">
+            <label class="field__label" for="spDebut">Date de début</label>
+            <input
+              id="spDebut"
+              type="date"
+              class="input"
+              formControlName="dateDebut"
+              [attr.min]="modeEditionSprint() ? null : dateMinDebutCreation()"
+              [class.input--invalid]="form.controls.dateDebut.invalid && form.controls.dateDebut.touched"
+            />
+            @if (!modeEditionSprint() && dateMinDebutCreation()) {
+              <span class="field__hint">Ne peut pas précéder le {{ formatDateFr(dateMinDebutCreation()!) }} (fin du dernier sprint).</span>
+            }
+          </div>
+          <div class="field">
+            <label class="field__label" for="spFin">Date de fin</label>
+            <input
+              id="spFin"
+              type="date"
+              class="input"
+              formControlName="dateFin"
+              [attr.min]="form.controls.dateDebut.value || null"
+              [class.input--invalid]="form.controls.dateFin.invalid && form.controls.dateFin.touched"
+            />
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="spObjectif">Objectif du sprint</label>
+          <input id="spObjectif" type="text" class="input" formControlName="objectif" [class.input--invalid]="form.controls.objectif.invalid && form.controls.objectif.touched" />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="spCapacite">Capacité de l'équipe (heures)</label>
+          <input id="spCapacite" type="number" min="1" class="input" formControlName="capaciteHeures" [class.input--invalid]="form.controls.capaciteHeures.invalid && form.controls.capaciteHeures.touched" />
+        </div>
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">
+          {{ modeEditionSprint() ? 'Les dates et l\'objectif peuvent être ajustés tant que le sprint n\'est pas clôturé.' : 'Le sprint est créé avec le statut « Planifié » ; les tâches du backlog pourront ensuite y être glissées.' }}
+        </span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerCreationSprint()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">{{ modeEditionSprint() ? 'Modifier le sprint' : 'Créer le sprint' }}</button>
+      </div>
+    </form>
+  </app-modal>
+
+  <app-confirmation-dialog
+    [open]="sprintACloturer() !== null"
+    title="Clôturer le sprint"
+    [message]="'Clôturer « ' + (sprintACloturer()?.nom ?? '') + ' » ? Il ne sera plus modifiable et n\'apparaîtra plus dans cette liste.'"
+    confirmLabel="Clôturer"
+    [destructive]="true"
+    (confirm)="confirmerClotureSprint()"
+    (cancel)="annulerClotureSprint()"
+  />
+</div>

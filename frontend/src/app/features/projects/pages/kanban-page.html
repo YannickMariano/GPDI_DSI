@@ -1,0 +1,171 @@
+<div class="kanban">
+  <div class="kanban__toolbar">
+    <div class="kanban__filters">
+      @if (assigneAMoi()) {
+        <button type="button" class="kanban__filter-chip kanban__filter-chip--active" (click)="toggleAssigneAMoi()">
+          Assigné : moi <span aria-hidden="true">×</span>
+        </button>
+      } @else {
+        <button type="button" class="kanban__filter-chip" (click)="toggleAssigneAMoi()">Assigné : moi</button>
+      }
+
+      <select class="kanban__select" (change)="changerSprintFiltre($any($event.target).value)" aria-label="Filtrer par sprint">
+        <option value="toutes" [selected]="sprintFiltre() === 'toutes'">Tous les sprints</option>
+        @for (sprint of sprints(); track sprint.id) {
+          <option [value]="sprint.id" [selected]="sprint.id === sprintFiltre()">{{ sprint.nom }}</option>
+        }
+      </select>
+
+      <select class="kanban__select" [value]="filtrePriorite()" (change)="filtrePriorite.set($any($event.target).value)" aria-label="Filtrer par priorité">
+        <option value="toutes">Toutes priorités</option>
+        <option value="critique">Critique</option>
+        <option value="haute">Haute</option>
+        <option value="normale">Normale</option>
+        <option value="basse">Basse</option>
+      </select>
+    </div>
+
+    <span class="kanban__count">
+      <strong>{{ totalTaches() }}</strong> tâches
+      @if (totalBloquees() > 0) {
+        · <strong>{{ totalBloquees() }}</strong> bloquée(s)
+      }
+    </span>
+
+    @if (peutGererTaches()) {
+      <button type="button" class="kanban__create-btn" (click)="ouvrirCreationTache()">+ Créer une tâche</button>
+    }
+  </div>
+
+  <div class="kanban__board">
+    @for (col of columns; track col.statut) {
+      <div class="kanban__column">
+        <div class="kanban__column-header">
+          <span class="kanban__column-dot" [style.background]="col.couleur"></span>
+          <span class="kanban__column-title">{{ col.titre }}</span>
+          <span class="kanban__column-count">{{ tachesParColonne(col.statut).length }}</span>
+        </div>
+        <div class="kanban__column-body" (dragover)="$event.preventDefault()" (drop)="onColumnDrop(col.statut)">
+          @for (task of tachesParColonne(col.statut); track task.id) {
+            <app-task-card
+              [task]="task"
+              [draggable]="true"
+              [canManage]="peutGererTaches()"
+              (open)="openTask($event)"
+              (dragStart)="onCardDragStart($event)"
+              (edit)="ouvrirModificationTache(task)"
+              (delete)="demanderSuppressionTache(task)"
+            />
+          } @empty {
+            <div class="kanban__empty-col">Aucune tâche.</div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <app-task-detail-panel [taskId]="selectedTaskId()" (close)="closePanel()" (openTask)="openTask($event)" />
+
+  <app-modal [open]="modalOuvert()" [width]="480" [ariaLabel]="modeEditionTache() ? 'Modifier la tâche' : 'Créer une tâche'" (close)="fermerCreationTache()">
+    <form class="form-modal" [formGroup]="form" (ngSubmit)="enregistrerTache()" novalidate>
+      <div class="form-modal__header">
+        <h2>{{ modeEditionTache() ? 'Modifier la tâche' : 'Créer une tâche' }}</h2>
+        <button type="button" class="form-modal__close" (click)="fermerCreationTache()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        <div class="field">
+          <label class="field__label" for="tfTitre">Titre</label>
+          <input id="tfTitre" type="text" class="input" formControlName="titre" [class.input--invalid]="form.controls.titre.invalid && form.controls.titre.touched" />
+          @if (form.controls.titre.invalid && form.controls.titre.touched) {
+            <span class="field__error">Le titre est requis.</span>
+          }
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="tfDescription">Description</label>
+          <textarea id="tfDescription" class="input" rows="3" formControlName="description" placeholder="Décrire le contexte, le périmètre ou les critères d'acceptation…"></textarea>
+        </div>
+
+        <div class="form-modal__row">
+          <div class="field">
+            <label class="field__label" for="tfPriorite">Priorité</label>
+            <select id="tfPriorite" class="select" formControlName="priorite">
+              <option value="critique">Critique</option>
+              <option value="haute">Haute</option>
+              <option value="normale">Normale</option>
+              <option value="basse">Basse</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="tfEstime">Estimé (heures)</label>
+            <input id="tfEstime" type="number" min="1" class="input" formControlName="estimeHeures" />
+          </div>
+        </div>
+
+        <div class="form-modal__row">
+          <div class="field">
+            <label class="field__label" for="tfEcheance">Échéance</label>
+            <input id="tfEcheance" type="date" class="input" formControlName="echeance" />
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="tfSprint">Sprint</label>
+            <select id="tfSprint" class="select" formControlName="sprintId">
+              <option value="">Backlog (aucun sprint)</option>
+              @for (sprint of sprints(); track sprint.id) {
+                <option [value]="sprint.id">{{ sprint.nom }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field__label">Assigner à</span>
+          <div class="task-modal__assignees">
+            @for (id of assigneesSelectionnesModal(); track id) {
+              @if (personneModal(id); as p) {
+                <span class="task-modal__assignee-chip">
+                  {{ p.nom }}
+                  <button type="button" class="task-modal__assignee-remove" (click)="retirerAssignationModal(id)" [attr.aria-label]="'Retirer ' + p.nom">×</button>
+                </span>
+              }
+            } @empty {
+              <span class="task-modal__assignee-empty">Aucun agent assigné.</span>
+            }
+          </div>
+          @if (agentsDisponiblesModal().length > 0) {
+            <div class="task-modal__assignee-add">
+              <select class="select" aria-label="Assigner un agent" [value]="agentAAffecterModal()" (change)="agentAAffecterModal.set($any($event.target).value)">
+                <option value="" disabled selected>Choisir un agent…</option>
+                @for (membre of agentsDisponiblesModal(); track membre!.id) {
+                  <option [value]="membre!.id">{{ membre!.nom }}</option>
+                }
+              </select>
+              <button type="button" class="task-modal__assignee-add-btn" [disabled]="!agentAAffecterModal()" (click)="assignerDansModal()">+ Ajouter</button>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">
+          {{ modeEditionTache() ? 'Le statut, les sous-tâches et les dépendances restent gérés depuis le détail de la tâche.' : 'La tâche est créée avec le statut « À faire » ; assignation et sprint restent modifiables ensuite.' }}
+        </span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerCreationTache()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">{{ modeEditionTache() ? 'Enregistrer' : 'Créer la tâche' }}</button>
+      </div>
+    </form>
+  </app-modal>
+
+  <app-confirmation-dialog
+    [open]="tacheASupprimer() !== null"
+    title="Supprimer la tâche"
+    [message]="'Supprimer « ' + (tacheASupprimer()?.code ?? '') + ' — ' + (tacheASupprimer()?.titre ?? '') + ' » ? Cette action est irréversible et retirera aussi ses dépendances.'"
+    confirmLabel="Supprimer"
+    [destructive]="true"
+    (confirm)="confirmerSuppressionTache()"
+    (cancel)="annulerSuppressionTache()"
+  />
+</div>

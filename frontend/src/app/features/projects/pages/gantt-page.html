@@ -1,0 +1,73 @@
+<div class="gantt">
+  <div class="gantt__toolbar">
+    <div class="gantt__zoom" role="group" aria-label="Niveau de zoom">
+      @for (z of ['mois', 'semaines', 'trimestres']; track z) {
+        <button type="button" class="gantt__zoom-btn" [class.gantt__zoom-btn--active]="zoom() === z" (click)="zoom.set($any(z))">{{ z | titlecase }}</button>
+      }
+    </div>
+    <label class="gantt__toggle">
+      <input type="checkbox" [checked]="afficherDependances()" (change)="afficherDependances.set($any($event.target).checked)" />
+      Afficher les dépendances
+    </label>
+    <div class="gantt__legend">
+      <span><span class="gantt__legend-swatch" style="background: var(--color-action)"></span>Sprint en cours</span>
+      <span><span class="gantt__legend-swatch" style="background: var(--color-success)"></span>Terminé</span>
+      <span><span class="gantt__legend-diamond"></span>Jalon</span>
+    </div>
+  </div>
+
+  @if (rows().length > 0) {
+    <div class="gantt__chart" tabindex="0" aria-label="Diagramme de Gantt, défilement horizontal">
+      <div class="gantt__header-row">
+        <div class="gantt__label-col"></div>
+        <div class="gantt__timeline">
+          @for (periode of periodHeader(); track $index) {
+            <span class="gantt__month">{{ periode }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="gantt__row gantt__row--milestones">
+        <div class="gantt__label-col">Jalons contractuels</div>
+        <div class="gantt__timeline gantt__timeline--relative">
+          @if (aujourdhuiPct(); as t) {
+            <div class="gantt__today" [style.left.%]="t"></div>
+          }
+          @for (m of milestoneMarkers(); track m.nom) {
+            <div class="gantt__milestone" [style.left.%]="m.positionPct">
+              <span class="gantt__milestone-diamond" [style.background]="m.couleur"></span>
+              <span class="gantt__milestone-label">{{ m.nom }}</span>
+            </div>
+          }
+        </div>
+      </div>
+
+      @for (row of rows(); track row.libelle) {
+        <div class="gantt__row">
+          <div class="gantt__label-col" [class.gantt__label-col--phase]="row.isPhase">{{ row.libelle }}</div>
+          <div class="gantt__timeline gantt__timeline--relative">
+            @if (aujourdhuiPct(); as t) {
+              <div class="gantt__today" [style.left.%]="t"></div>
+            }
+            @if (afficherDependances() && row.dependOnEndPct !== null) {
+              <div class="gantt__dependency" [style.left.%]="row.dependOnEndPct" [style.width.%]="row.startPct - row.dependOnEndPct"></div>
+            }
+            <div class="gantt__bar-track" [style.left.%]="row.startPct" [style.width.%]="row.widthPct">
+              <div class="gantt__bar-progress" [style.width.%]="row.progressPct"></div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <div class="gantt__insight">
+      <app-ai-suggestion-chip>IA — analyse du chemin critique</app-ai-suggestion-chip>
+      <p>
+        Le chemin critique passe par le Sprint 4 (référentiel fournisseurs) puis la bascule vers la nouvelle base. Un retard sur T-142
+        décale directement le jalon de bascule et la mise en production.
+      </p>
+    </div>
+  } @else {
+    <app-empty-state icon="◴" title="Aucune donnée de planification pour ce projet" />
+  }
+</div>

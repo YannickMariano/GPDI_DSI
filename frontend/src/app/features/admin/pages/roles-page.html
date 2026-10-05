@@ -1,0 +1,132 @@
+<div class="roles-page">
+  <h1 class="roles-page__title">Rôles et habilitations</h1>
+
+  <div class="roles-page__banner">
+    <span class="roles-page__banner-icon" aria-hidden="true">◇</span>
+    <p>
+      Les 5 rôles système (Directeur DSI, Chef de projet, Membre équipe, Administrateur, Direction métier) sont fixes.
+      La matrice ci-dessous définit leurs droits par fonctionnalité : elle est persistée en base et appliquée
+      dynamiquement par le backend, en complément des rôles Keycloak qui protègent chaque module.
+    </p>
+  </div>
+
+  <div class="roles-page__intro">
+    <span class="roles-page__count">{{ roles.length }} rôles système · {{ matrice().length }} fonctionnalités habilitables</span>
+    <span class="roles-page__hint">Cliquez sur une case de la matrice pour faire basculer le droit du rôle : Lecture → Écriture → Aucun.</span>
+  </div>
+
+  <div class="roles-page__cards">
+    @for (carte of roleCards(); track carte.role) {
+      <div class="roles-page__card" [style.borderTopColor]="carte.style.color">
+        <div class="roles-page__card-header">
+          <span class="roles-page__card-name">{{ carte.nom }}</span>
+          <span class="roles-page__card-count">{{ carte.comptes }} compte{{ carte.comptes === 1 ? '' : 's' }}</span>
+        </div>
+        <span class="roles-page__card-mission">{{ carte.mission }}</span>
+        <div class="roles-page__card-footer">
+          <span>Fonctions ouvertes</span>
+          <span class="roles-page__card-droits" [style.color]="carte.style.color">{{ carte.droitsOuverts }} / {{ matrice().length }}</span>
+        </div>
+        <div class="roles-page__card-actions">
+          <button type="button" class="roles-page__card-edit" (click)="ouvrirModificationRole(carte)">Modifier</button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="roles-page__matrix">
+    <div class="roles-page__matrix-header">
+      <span>Matrice des habilitations par fonctionnalité</span>
+      <div class="roles-page__legend">
+        <span class="roles-page__legend-item"><span class="roles-page__legend-swatch" style="background: var(--color-success-bg); color: var(--color-success-text)">✓</span>Écriture</span>
+        <span class="roles-page__legend-item"><span class="roles-page__legend-swatch" style="background: var(--color-action-bg); color: var(--color-action)">L</span>Lecture</span>
+        <span class="roles-page__legend-item"><span class="roles-page__legend-swatch" style="background: var(--color-surface-muted); color: var(--color-border-decorative)">–</span>Aucun droit</span>
+      </div>
+    </div>
+
+    <div class="roles-page__matrix-table" role="table">
+      <div class="roles-page__matrix-row roles-page__matrix-row--head" role="row">
+        <span role="columnheader">Fonctionnalité</span>
+        @for (role of roles; track role) {
+          <span role="columnheader" class="roles-page__matrix-col-label">{{ roleLabels[role] }}</span>
+        }
+      </div>
+      @for (ligne of matrice(); track ligne.fonction) {
+        <div class="roles-page__matrix-row" role="row">
+          <span class="roles-page__matrix-fonction" role="cell">{{ ligne.fonction }}</span>
+          @for (role of roles; track role) {
+            <span role="cell" class="roles-page__matrix-cell">
+              <button
+                type="button"
+                class="roles-page__matrix-mark"
+                [style.background]="cellMark[ligne.acces[role]].bg"
+                [style.color]="cellMark[ligne.acces[role]].color"
+                [attr.aria-label]="ligne.fonction + ' — ' + roleLabels[role] + ' : ' + ligne.acces[role]"
+                (click)="cyclerCellule(ligne.fonction, role)"
+              >
+                {{ cellMark[ligne.acces[role]].marque }}
+              </button>
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (aDesModifications()) {
+    <div class="roles-page__save-bar">
+      <span>Des modifications de la matrice n'ont pas été enregistrées.</span>
+      <button type="button" class="roles-page__btn roles-page__btn--secondary" (click)="annulerModifications()">Annuler</button>
+      <button type="button" class="roles-page__btn roles-page__btn--primary" (click)="enregistrer()">Enregistrer</button>
+    </div>
+  }
+
+  <app-modal [open]="modalRoleOuvert()" [width]="520" ariaLabel="Modifier le rôle" (close)="fermerCreationRole()">
+    <form class="form-modal" [formGroup]="formRole" (ngSubmit)="enregistrerRole()" novalidate>
+      <div class="form-modal__header">
+        <h2>Modifier le rôle</h2>
+        <button type="button" class="form-modal__close" (click)="fermerCreationRole()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        <div class="field">
+          <label class="field__label" for="rNom">Nom du rôle</label>
+          <input id="rNom" type="text" class="input" formControlName="nom" />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="rDescription">Description</label>
+          <textarea id="rDescription" class="input" rows="2" formControlName="description" placeholder="Rôle et responsabilités de ce rôle"></textarea>
+        </div>
+
+        <div class="field">
+          <span class="field__label" id="rHabilitationsLabel">Habilitations par fonctionnalité</span>
+          <span class="field__hint">Cliquez pour faire basculer Lecture → Écriture → Aucun droit.</span>
+          <div class="roles-page__new-role-matrix" aria-labelledby="rHabilitationsLabel">
+            @for (fonction of fonctionsDisponibles(); track fonction) {
+              <div class="roles-page__new-role-row">
+                <span class="roles-page__new-role-fonction">{{ fonction }}</span>
+                <button
+                  type="button"
+                  class="roles-page__matrix-mark"
+                  [style.background]="cellMark[niveauEdition(fonction)].bg"
+                  [style.color]="cellMark[niveauEdition(fonction)].color"
+                  [attr.aria-label]="fonction + ' : ' + niveauEdition(fonction)"
+                  (click)="cyclerPermissionRoleEnEdition(fonction)"
+                >
+                  {{ cellMark[niveauEdition(fonction)].marque }}
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">Les rôles ne se cumulent pas : un compte ne porte jamais qu'un seul rôle.</span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerCreationRole()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">Enregistrer</button>
+      </div>
+    </form>
+  </app-modal>
+</div>

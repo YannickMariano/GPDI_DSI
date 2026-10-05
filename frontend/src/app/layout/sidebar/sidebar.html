@@ -1,0 +1,43 @@
+<aside class="rail" aria-label="Navigation principale">
+  <div class="rail__brand">
+    <span class="rail__logo" aria-hidden="true">G</span>
+    <span class="rail__brand-name">GPDI</span>
+  </div>
+
+  @if (showProjectSwitcher() && activeProject(); as project) {
+    <a class="rail__project" routerLink="/projets/{{ project.id }}/apercu">
+      <span class="rail__project-label">Projet actif</span>
+      <span class="rail__project-row">
+        <span class="rail__project-name">{{ project.nom }}</span>
+        <span aria-hidden="true">▾</span>
+      </span>
+    </a>
+  }
+
+  <nav class="rail__nav">
+    @for (item of railItems(); track item.route) {
+      <a
+        class="rail__item"
+        [routerLink]="item.route"
+        [class.rail__item--active]="isItemActive(item)"
+      >
+        <span class="rail__item-icon" aria-hidden="true">{{ item.icone }}</span>
+        <span class="rail__item-label">{{ item.libelle }}</span>
+        @if (item.badge) {
+          <span class="rail__item-badge">{{ item.badge }}</span>
+        }
+      </a>
+    }
+  </nav>
+
+  @if (user(); as u) {
+    <div class="rail__user">
+      <app-avatar [initiales]="u.initiales" [bg]="u.avatarBg" [nom]="u.nom" [size]="28" />
+      <div class="rail__user-info">
+        <span class="rail__user-name">{{ u.nom }}</span>
+        <span class="rail__user-role">{{ roleLabel() }}</span>
+      </div>
+      <button type="button" class="rail__logout" (click)="logout()" aria-label="Se déconnecter">⏻</button>
+    </div>
+  }
+</aside>

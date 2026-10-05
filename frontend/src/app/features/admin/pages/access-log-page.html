@@ -1,0 +1,37 @@
+<div class="access-log">
+  <h1 class="access-log__title">Journal d'accès</h1>
+
+  <section class="access-log__panel">
+    <div class="access-log__panel-header">
+      <span>Journal des connexions</span>
+      <span class="access-log__hint">connexions, déconnexions et tentatives échouées · horodatage et adresse IP</span>
+      <button type="button" class="access-log__export-btn" (click)="exporterJournal()">Exporter</button>
+    </div>
+
+    <div class="access-log__table" role="table">
+      <div class="access-log__row access-log__row--head" role="row">
+        <span role="columnheader">Horodatage</span>
+        <span role="columnheader">Compte</span>
+        <span role="columnheader">Événement</span>
+        <span role="columnheader">Adresse IP</span>
+        <span role="columnheader">Résultat</span>
+      </div>
+      @for (ligne of journal(); track ligne.entry.id) {
+        <div class="access-log__row" role="row">
+          <span class="access-log__mono" role="cell">{{ formatHorodatage(ligne.entry.horodatage) }}</span>
+          <span class="access-log__account" role="cell">
+            <app-avatar [initiales]="ligne.personne?.initiales ?? '?'" [bg]="ligne.personne?.avatarBg ?? 'var(--color-surface-alt)'" [size]="22" />
+            <span>{{ ligne.personne?.email ?? ligne.entry.nomAffiche }}</span>
+          </span>
+          <span role="cell">{{ ligne.entry.evenement }}</span>
+          <span class="access-log__mono" role="cell">{{ ligne.entry.ip }}</span>
+          <span role="cell">
+            <span class="access-log__resultat" [class.access-log__resultat--echec]="ligne.entry.resultat === 'echec'">
+              {{ ligne.entry.resultat === 'succes' ? 'Succès' : 'Échec' }}
+            </span>
+          </span>
+        </div>
+      }
+    </div>
+  </section>
+</div>

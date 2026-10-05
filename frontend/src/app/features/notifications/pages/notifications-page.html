@@ -1,0 +1,30 @@
+<div class="alerts">
+  <header class="alerts__header">
+    <div>
+      <h1>Alertes</h1>
+      <p>{{ unreadCount() }} non lue(s)</p>
+    </div>
+    <button type="button" class="alerts__mark-all" (click)="markAllRead()">Tout marquer lu</button>
+  </header>
+
+  @if (notifications().length > 0) {
+    <ul class="alerts__list">
+      @for (n of notifications(); track n.id) {
+        <li>
+          <button type="button" class="alert-card" [style.borderLeftColor]="typeConfig[n.type].color" (click)="open(n)">
+            @if (!n.lu) {
+              <span class="alert-card__unread-dot" aria-hidden="true"></span>
+            }
+            <div class="alert-card__body">
+              <span class="alert-card__type" [style.color]="typeConfig[n.type].color">{{ typeConfig[n.type].label }}</span>
+              <span class="alert-card__title">{{ n.titre }}</span>
+              <span class="alert-card__meta">{{ n.meta }} · {{ n.quand | relativeTime }}</span>
+            </div>
+          </button>
+        </li>
+      }
+    </ul>
+  } @else {
+    <app-empty-state icon="◔" title="Aucune alerte" />
+  }
+</div>

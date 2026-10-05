@@ -1,0 +1,88 @@
+<div class="team">
+  <header class="team__header">
+    <div>
+      <h1>Équipe &amp; charge</h1>
+      <p>
+        {{ workload().length }} membres affectés
+        @if (surchargesCount() > 0) {
+          <span class="team__over-pill">{{ surchargesCount() }} surcharge(s) détectée(s)</span>
+        }
+      </p>
+    </div>
+    @if (peutGererEquipe()) {
+      <button type="button" class="team__cta" (click)="affecterAgent()">Affecter un agent</button>
+    }
+  </header>
+
+  @if (workload().length > 0) {
+    <div class="team__grid">
+      @for (member of workload(); track member.person.id) {
+        <div class="team__card">
+          <div class="team__card-header">
+            <app-avatar [initiales]="member.person.initiales" [bg]="member.person.avatarBg" [nom]="member.person.nom" [size]="34" />
+            <div>
+              <div class="team__name">{{ member.person.nom }}</div>
+              <div class="team__role">{{ member.person.direction }}</div>
+            </div>
+            <span class="team__state-pill" [style.background]="etatCharge(member.chargePct).bg" [style.color]="etatCharge(member.chargePct).text">
+              {{ etatCharge(member.chargePct).label }}
+            </span>
+          </div>
+
+          <div class="team__charge-row">
+            <span>Charge</span>
+            <span class="team__charge-value">{{ member.chargePct }} %</span>
+          </div>
+          <app-progress-bar [value]="member.chargePct" [color]="etatCharge(member.chargePct).text" />
+          <span class="team__hours">{{ member.heuresAffectees }} h affectées</span>
+
+          <div class="team__stats">
+            <span>{{ member.tachesEnCours }} en cours</span>
+            <span>{{ member.tachesBloquees }} bloquée(s)</span>
+          </div>
+
+          @if (suggestionPour(member.chargePct); as suggestion) {
+            <div class="team__alert">{{ suggestion }}</div>
+          }
+        </div>
+      }
+    </div>
+  } @else {
+    <app-empty-state
+      icon="◫"
+      title="Aucun membre affecté"
+      [actionLabel]="peutGererEquipe() ? 'Affecter un agent' : undefined"
+      (action)="affecterAgent()"
+    />
+  }
+
+  <app-modal [open]="modalOuvert()" [width]="440" ariaLabel="Affecter un agent" (close)="fermerAffectation()">
+    <form class="form-modal" [formGroup]="form" (ngSubmit)="confirmerAffectation()" novalidate>
+      <div class="form-modal__header">
+        <h2>Affecter un agent</h2>
+        <button type="button" class="form-modal__close" (click)="fermerAffectation()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        <div class="field">
+          <label class="field__label" for="taAgent">Agent</label>
+          <select id="taAgent" class="select" formControlName="agentId" [class.input--invalid]="form.controls.agentId.invalid && form.controls.agentId.touched">
+            <option value="" disabled>Sélectionner un agent</option>
+            @for (agent of agentsDisponibles(); track agent.id) {
+              <option [value]="agent.id">{{ agent.nom }}</option>
+            }
+          </select>
+          @if (agentsDisponibles().length === 0) {
+            <span class="field__hint">Tous les agents disponibles sont déjà affectés à ce projet.</span>
+          }
+        </div>
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">L'agent affecté devient éligible à l'attribution de tâches sur ce projet.</span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerAffectation()">Annuler</button>
+        <button type="submit" class="form-modal__btn form-modal__btn--primary">Affecter</button>
+      </div>
+    </form>
+  </app-modal>
+</div>

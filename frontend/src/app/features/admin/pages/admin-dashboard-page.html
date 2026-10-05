@@ -1,0 +1,74 @@
+<div class="admin-dashboard">
+  <h1 class="admin-dashboard__title">Tableau de bord</h1>
+
+  <div class="admin-dashboard__kpis">
+    @for (k of kpis(); track k.libelle) {
+      <app-kpi-card [label]="k.libelle" [value]="k.valeur" [delta]="k.detail" [deltaColor]="tonColor[k.ton]" />
+    }
+  </div>
+
+  <div class="admin-dashboard__domaines">
+    <span class="admin-dashboard__section-title">Domaines d'administration</span>
+    <div class="admin-dashboard__domaines-grid">
+      @for (d of domaines(); track d.nom) {
+        <a class="admin-dashboard__domain-card" [routerLink]="d.route">
+          <div class="admin-dashboard__domain-head">
+            <span class="admin-dashboard__domain-icon" aria-hidden="true">{{ d.icone }}</span>
+            <span class="admin-dashboard__domain-name">{{ d.nom }}</span>
+            <span class="admin-dashboard__domain-arrow" aria-hidden="true">→</span>
+          </div>
+          <div class="admin-dashboard__domain-figures">
+            @for (c of d.chiffres; track c.libelle) {
+              <div class="admin-dashboard__domain-figure">
+                <span class="admin-dashboard__domain-figure-value">{{ c.valeur }}</span>
+                <span class="admin-dashboard__domain-figure-label">{{ c.libelle }}</span>
+              </div>
+            }
+          </div>
+          @if (d.alerte) {
+            <span class="admin-dashboard__domain-alert">{{ d.alerte }}</span>
+          }
+          <span class="admin-dashboard__domain-action">{{ d.action }}</span>
+        </a>
+      }
+    </div>
+  </div>
+
+  <div class="admin-dashboard__lower">
+    <section class="admin-dashboard__activity">
+      <div class="admin-dashboard__activity-header">
+        <span>Activité d'administration récente</span>
+        <a class="admin-dashboard__activity-link" routerLink="/administration/journal-acces">Voir le journal</a>
+      </div>
+      @for (a of activiteRecente(); track $index) {
+        <div class="admin-dashboard__activity-row">
+          <span class="admin-dashboard__activity-time">{{ a.heure }}</span>
+          <div class="admin-dashboard__activity-body">
+            <span class="admin-dashboard__activity-dot" [style.background]="a.dot"></span>
+            <div class="admin-dashboard__activity-text">
+              <span class="admin-dashboard__activity-type">{{ a.type }}</span>
+              <span class="admin-dashboard__activity-detail">{{ a.detail }}</span>
+            </div>
+          </div>
+        </div>
+      } @empty {
+        <p class="admin-dashboard__empty-note">Aucune activité récente.</p>
+      }
+    </section>
+
+    <section class="admin-dashboard__vigilance">
+      <span class="admin-dashboard__section-title">Points de vigilance</span>
+      @for (v of pointsVigilance(); track $index) {
+        <div class="admin-dashboard__vigilance-row">
+          <span class="admin-dashboard__vigilance-dot" [style.background]="tonColor[v.ton]"></span>
+          <div class="admin-dashboard__vigilance-text">
+            <span class="admin-dashboard__vigilance-texte">{{ v.texte }}</span>
+            <span class="admin-dashboard__vigilance-source">{{ v.source }}</span>
+          </div>
+        </div>
+      } @empty {
+        <p class="admin-dashboard__empty-note">Aucun point de vigilance identifié.</p>
+      }
+    </section>
+  </div>
+</div>

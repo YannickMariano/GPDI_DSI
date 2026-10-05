@@ -1,0 +1,103 @@
+<div class="ai-page">
+  <section class="ai-page__recommendations">
+    <div class="ai-page__header">
+      <h1>Recommandations en attente</h1>
+      <span class="ai-page__count">{{ recommandations().length }}</span>
+      @if (projetId()) {
+        <button type="button" class="ai-page__analyse-btn" [disabled]="analyseEnCours()" (click)="analyser()">
+          {{ analyseEnCours() ? 'Analyse en cours…' : 'Analyser' }}
+        </button>
+      }
+    </div>
+    <p class="ai-page__governance">Aucune recommandation n'est appliquée sans validation humaine.</p>
+
+    @if (recommandations().length > 0) {
+      <div class="ai-page__cards">
+        @for (r of recommandations(); track r.id) {
+          <article class="ai-card">
+            <div class="ai-card__top">
+              <span class="ai-card__type" [style.background]="typeLabel[r.type].bg" [style.color]="typeLabel[r.type].text">{{ typeLabel[r.type].label }}</span>
+              <span class="ai-card__time">{{ r.quand | relativeTime }}</span>
+            </div>
+            <h2 class="ai-card__title">{{ r.libelle }}</h2>
+            <p class="ai-card__body">{{ r.justification }}</p>
+            @if (r.preuve) {
+              <div class="ai-card__evidence">
+                <strong>Sur quoi elle s'appuie</strong>
+                <p>{{ r.preuve }}</p>
+              </div>
+            }
+            <div class="ai-card__actions">
+              <button type="button" class="ai-card__primary" [disabled]="enTraitementDe(r.id)" (click)="appliquer(r)">{{ typeLabel[r.type].action }}</button>
+              <button type="button" class="ai-card__tertiary" [disabled]="enTraitementDe(r.id)" (click)="ignorer(r)">Ignorer</button>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <app-empty-state icon="✓" title="Aucune recommandation en attente" description="Lancez une analyse pour que l'assistant en propose." />
+    }
+  </section>
+
+  <section class="ai-page__chat">
+    <div class="ai-chat__header">
+      <span class="ai-chat__avatar" aria-hidden="true">✦</span>
+      <div class="ai-chat__header-body">
+        <div class="ai-chat__name">Assistant GPDI</div>
+        @if (projetsDisponibles().length > 1) {
+          <label class="ai-chat__context ai-chat__context--label" for="ai-chat-project-select">
+            Contexte :
+            <select id="ai-chat-project-select" class="ai-chat__project-select" [value]="projetId()" (change)="selectProjet($any($event.target).value)">
+              @for (p of projetsDisponibles(); track p.id) {
+                <option [value]="p.id" [selected]="p.id === projetId()">{{ p.nom }}</option>
+              }
+            </select>
+          </label>
+        } @else {
+          <div class="ai-chat__context">Contexte : {{ projetSelectionne()?.nom ?? 'aucun projet' }}</div>
+        }
+      </div>
+    </div>
+
+    @if (projetId()) {
+      <div class="ai-chat__messages">
+        @for (m of messages(); track m.id) {
+          <div class="ai-chat__message" [class.ai-chat__message--user]="m.isUser">
+            <div class="ai-chat__bubble">{{ m.texte }}</div>
+            @if (m.source) {
+              <span class="ai-chat__source">{{ m.source }}</span>
+            }
+          </div>
+        }
+        @if (enCours()) {
+          <div class="ai-chat__message">
+            <div class="ai-chat__bubble ai-chat__bubble--pending">L'assistant réfléchit… (jusqu'à quelques minutes)</div>
+          </div>
+        }
+      </div>
+
+      <div class="ai-chat__prompts">
+        @for (p of promptsSuggeres; track p) {
+          <button type="button" class="ai-chat__prompt-chip" [disabled]="enCours()" (click)="envoyerPrompt(p)">{{ p }}</button>
+        }
+      </div>
+
+      <div class="ai-chat__input-row">
+        <label for="ai-chat-input" class="sr-only">Écrire à l'assistant</label>
+        <input
+          id="ai-chat-input"
+          type="text"
+          class="ai-chat__input"
+          placeholder="Écrire à l'assistant…"
+          [disabled]="enCours()"
+          [value]="saisie()"
+          (input)="saisie.set($any($event.target).value)"
+          (keydown.enter)="envoyer()"
+        />
+        <button type="button" class="ai-chat__send" [disabled]="enCours()" (click)="envoyer()">Envoyer</button>
+      </div>
+    } @else {
+      <app-empty-state icon="✦" title="Aucun projet géré" description="L'assistant IA est disponible dès que vous êtes responsable d'un projet." />
+    }
+  </section>
+</div>
