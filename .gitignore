@@ -76,6 +76,7 @@ frontend/.vscode/*
 .claude/
 .cursor/
 .gemini/
+CLAUDE.md
 frontend/.github/
 .github/modernize/
 backend/.github/modernize/
@@ -88,3 +89,4 @@ logs/
 .DS_Store
 Thumbs.db
 desktop.ini
+.gitignore
