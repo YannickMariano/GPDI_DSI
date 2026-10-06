@@ -16,30 +16,28 @@ partage client, gestion des risques assistée par IA).
 
 ## Architecture
 
-Le projet suit l'architecture en couches `Controller -> Service -> Repository` imposée par le guide de bonnes
-pratiques backend DSI MEF (`config/`, `controller/`, `dto/{request,response}/`, `entity/`, `repository/`,
-`service/{,impl/}`, `mapper/`, `exception/`, `security/`). Les entités JPA ne sont jamais exposées directement :
+Le projet suit l'architecture en couches `Controller -> Service -> Repository` imposée par le guide backend DSI MEF (`config/`, `controller/`, `dto/{request,response}/`, `entity/`, `repository/`, `service/{,impl/}`, `mapper/`, `exception/`, `security/`). 
+
+Les entités JPA ne sont jamais exposées directement :
 les DTO sont convertis par MapStruct. Toute nouvelle fonctionnalité doit suivre ce même pattern.
 
 ## Modules fonctionnels
 
-| Domaine | Description |
-|---|---|
-| Role | Rôles applicatifs (référencés par `Utilisateur`) |
-| Utilisateur | Comptes (matricule, mot de passe haché, rôle) |
-| Équipe | Équipes avec chef d'équipe et membres (`membre_equipes`) |
-| Projet | Projets, responsable (`chef_projet`), équipe assignée |
-| Sprint | Sprints d'un projet, cycle de vie `PLANIFIE -> EN_COURS -> CLOTURER` |
-| Jalon | Jalons d'un projet, cycle de vie `A_VENIR -> EN_RETARD -> ATTEINT` / `ANNULER` |
-| Livrable | Livrables d'un jalon, cycle de vie `ATTENDU -> LIVRE` / `REJETE` |
-| Tâche | Tâches d'un projet (backlog ou sprint), avec sous-tâches, commentaires, dépendances, assignations |
-| Partage client | Partage de projets avec des comptes `direction_metier`, avec échéance |
-| Notification | Notifications personnelles (lu / non lu) générées par les événements du backend |
-| Risque (IA) | Détection automatique des risques d'un projet par l'assistant IA, solutions proposées, application sur le projet ou rejet (voir section Risque) |
-| Point d'information | Points d'information publiés par le chef de projet à destination des comptes clients partagés (voir section dédiée) |
-| Assistant IA | Chat en langage libre sur le contexte d'un projet, réservé à son chef de projet (voir section dédiée) |
-| Recommandation de pilotage | Recommandations proactives (réaffectation, retrait du sprint, ajustement d'estimation) proposées par l'IA sur un projet (voir section dédiée) |
-| Habilitation | Matrice des droits (lecture/écriture) par rôle métier et par fonction, éditable par un administrateur et appliquée dynamiquement (voir section Sécurité) |
+- Role :Rôles applicatifs (référencés par `Utilisateur`)
+- Utilisateur: Comptes (matricule, mot de passe haché, rôle)
+- Équipe: Équipes avec chef d'équipe et membres (`membre_equipes`)
+- Projet: Projets, responsable (`chef_projet`), équipe assignée
+- Sprint: Sprints d'un projet, cycle de vie `PLANIFIE -> EN_COURS -> CLOTURER`
+- Jalon: Jalons d'un projet, cycle de vie `A_VENIR -> EN_RETARD -> ATTEINT` / `ANNULER`
+- Livrable: Livrables d'un jalon, cycle de vie `ATTENDU -> LIVRE` / `REJETE`
+- Tâche: Tâches d'un projet (backlog ou sprint), avec sous-tâches, commentaires, dépendances, assignations
+- Partage client: Partage de projets avec des comptes `direction_metier`, avec échéance
+- Notification: Notifications personnelles (lu / non lu) générées par les événements du backend
+- Risque (IA): Détection automatique des risques d'un projet par l'assistant IA, solutions proposées, application sur le projet ou rejet (voir section Risque)
+- Point d'information: Points d'information publiés par le chef de projet à destination des comptes clients partagés (voir section dédiée)
+- Assistant IA: Chat en langage libre sur le contexte d'un projet, réservé à son chef de projet (voir section dédiée)
+- Recommandation de pilotage: Recommandations proactives (réaffectation, retrait du sprint, ajustement d'estimation) proposées par l'IA sur un projet (voir section dédiée)
+- Habilitation: Matrice des droits (lecture/écriture) par rôle métier et par fonction, éditable par un administrateur et appliquée dynamiquement (voir section Sécurité)
 
 ## Configuration locale
 
@@ -56,16 +54,15 @@ Hibernate. Voir la section Base de données ci-dessous pour la liste des types E
 ### Ollama (module IA)
 
 Le module IA interroge un serveur [Ollama](https://ollama.com) local. Prérequis : Ollama installé et le modèle
-téléchargé (`ollama pull qwen3:8b`). Variables (toutes facultatives) :
+téléchargé (`ollama pull qwen3:8b`). 
+Variables (toutes facultatives) :
 
-| Variable | Défaut | Rôle |
-|---|---|---|
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Adresse du serveur Ollama |
-| `OLLAMA_MODEL` | `qwen3:8b` | Modèle utilisé |
-| `OLLAMA_TIMEOUT_SECONDS` | `300` | Délai maximal d'un appel (le premier appel à froid dure ~2-3 min) |
-| `OLLAMA_KEEP_ALIVE` | `30m` | Durée pendant laquelle Ollama garde le modèle en mémoire après un appel |
-| `OLLAMA_NUM_CTX` | `8192` | Taille de la fenêtre de contexte (en jetons) |
-| `IA_RISQUE_CRON` | `0 0 2 * * *` | Détection automatique des risques (cron Spring à 6 champs) ; `-` la désactive |
+- `OLLAMA_BASE_URL` - `http://localhost:11434`- Adresse du serveur Ollama
+- `OLLAMA_MODEL` - `qwen3:8b` - Modèle utilisé 
+- `OLLAMA_TIMEOUT_SECONDS` - `300` - Délai maximal d'un appel (le premier appel à froid dure ~2-3 min) |
+- `OLLAMA_KEEP_ALIVE` - `30m` - Durée pendant laquelle Ollama garde le modèle en mémoire après un appel |
+- `OLLAMA_NUM_CTX` - `8192` - Taille de la fenêtre de contexte (en jetons) |
+- `IA_RISQUE_CRON` - `0 0 2 * * *` - Détection automatique des risques (cron Spring à 6 champs) ; `-` la désactive
 
 Aucun secret n'est nécessaire (Ollama n'est pas authentifié : ne pas l'exposer hors du serveur applicatif).
 
@@ -79,18 +76,17 @@ L'API est protégée par un serveur de ressources OAuth2 (JWT). Variables attend
 Les rôles sont lus dans le claim `resource_access.<KEYCLOAK_CLIENT_ID>.roles` du jeton JWT. Rôles attendus côté
 Keycloak (un par domaine, définis au niveau du client) :
 
-| Rôle Keycloak | Protège |
-|---|---|
-| `GESTIONNAIRE_ROLE` | `/api/roles/**` et `/api/habilitations/**` |
-| `GESTIONNAIRE_UTILISATEUR` | `/api/utilisateurs/**` |
-| `GESTIONNAIRE_EQUIPE` | `/api/equipes/**` |
-| `GESTIONNAIRE_PROJET` | `/api/projets/**` (hors sous-routes ci-dessous) |
-| `GESTIONNAIRE_SPRINT` | `/api/projets/{idProjet}/sprints/**` |
-| `GESTIONNAIRE_JALON` | `/api/projets/{idProjet}/jalons/**` |
-| `GESTIONNAIRE_LIVRABLE` | `/api/jalons/{idJalon}/livrables/**` |
-| `GESTIONNAIRE_TACHE` | `/api/projets/{idProjet}/taches/**` et `/api/taches/**` (sous-tâches, commentaires, dépendances) |
-| `GESTIONNAIRE_PARTAGE` | `/api/partages-clients/**` |
-| `GESTIONNAIRE_RISQUE` | `/api/projets/{idProjet}/risques/**` (lecture, détection, suggestions, application, rejet) |
+
+- `GESTIONNAIRE_ROLE` : `/api/roles/**` et `/api/habilitations/**` 
+- `GESTIONNAIRE_UTILISATEUR` : `/api/utilisateurs/**`
+- `GESTIONNAIRE_EQUIPE` : `/api/equipes/**`
+- `GESTIONNAIRE_PROJET` : `/api/projets/**` (hors sous-routes ci-dessous)
+- `GESTIONNAIRE_SPRINT` : `/api/projets/{idProjet}/sprints/**`
+- `GESTIONNAIRE_JALON` : `/api/projets/{idProjet}/jalons/**`
+- `GESTIONNAIRE_LIVRABLE` : `/api/jalons/{idJalon}/livrables/**`
+- `GESTIONNAIRE_TACHE` : `/api/projets/{idProjet}/taches/**` et `/api/taches/**` (sous-tâches, commentaires, dépendances)
+- `GESTIONNAIRE_PARTAGE` : `/api/partages-clients/**`
+- `GESTIONNAIRE_RISQUE` : `/api/projets/{idProjet}/risques/**` (lecture, détection, suggestions, application, rejet)
 
 Rôles métier (valeurs de la table `roles`, exactement les 5 valeurs attendues par le frontend
 `core/models/role.model.ts` : `administrateur`, `directeur_dsi`, `chef_projet`, `membre_equipe`,
@@ -157,13 +153,11 @@ Swagger UI, disponible en dev/recette uniquement (`/swagger-ui/index.html`), dé
 
 Cinq tâches tournent tous les jours à minuit (`@Scheduled(cron = "0 0 0 * * *")`) :
 
-| Tâche | Effet |
-|---|---|
-| `ProjetPlanificateur` | `EN_PREPARATION` -> `EN_COURS` si `date_debut` atteinte (active aussi l'équipe) |
-| `JalonPlanificateur` | `A_VENIR` -> `EN_RETARD` si `date_echeance` dépassée |
-| `PartageClientPlanificateur` | `ACTIF` -> `EXPIRE` si `date_echeance` dépassée |
-| `BurndownPlanificateur` | Capture un instantané du travail restant de chaque sprint `EN_COURS` (voir section Burndown) |
-| `NotificationPlanificateur` | Rappels d'échéance : notifie les assignés des tâches non terminées dont l'échéance est dans 24 h au plus ou dépassée (voir section Notification) |
+- `ProjetPlanificateur` : `EN_PREPARATION` -> `EN_COURS` si `date_debut` atteinte (active aussi l'équipe)
+- `JalonPlanificateur` : `A_VENIR` -> `EN_RETARD` si `date_echeance` dépassée
+- `PartageClientPlanificateur` : `ACTIF` -> `EXPIRE` si `date_echeance` dépassée
+- `BurndownPlanificateur` : Capture un instantané du travail restant de chaque sprint `EN_COURS` (voir section Burndown)
+- `NotificationPlanificateur` : Rappels d'échéance : notifie les assignés des tâches non terminées dont l'échéance est dans 24 h au plus ou dépassée (voir section Notification)
 
 Une sixième tâche, `RisquePlanificateur`, tourne chaque nuit à **2 h** (`IA_RISQUE_CRON`) : elle lance la détection
 des risques par l'IA sur chaque projet `EN_COURS` (voir section Risque). Elle s'interrompt au premier échec
@@ -336,13 +330,11 @@ Rôle Keycloak `GESTIONNAIRE_RISQUE` pour toutes les routes. L'assistant IA (Oll
 risques d'un projet ; l'utilisateur ne fait que consulter, demander des solutions, les appliquer ou rejeter le
 risque. Les statuts sont renvoyés en majuscules.
 
-| Route | Effet |
-|---|---|
-| `GET /` | Tous les risques du projet (non paginé), par ordre de détection |
-| `POST /detection` | Lance la détection maintenant (le job de nuit fait la même chose) |
-| `POST /{idRisque}/suggestions` | Solutions proposées pour un risque `OUVERT` (bouton « Suggérer ») |
-| `POST /{idRisque}/appliquer` | Exécute les solutions cochées (bouton « Appliquer ») |
-| `POST /{idRisque}/rejeter` | Rejette le risque (bouton « Rejeter ») |
+- `GET /` : Tous les risques du projet (non paginé), par ordre de détection
+- `POST /detection` : Lance la détection maintenant (le job de nuit fait la même chose)
+- `POST /{idRisque}/suggestions` : Solutions proposées pour un risque `OUVERT` (bouton « Suggérer »)
+- `POST /{idRisque}/appliquer` : Exécute les solutions cochées (bouton « Appliquer »)
+- `POST /{idRisque}/rejeter` : Rejette le risque (bouton « Rejeter »)
 
 **`GET /`** renvoie `[{ id, code, libelle, parade, analyse, probabilite, impact, niveau, statut, dateDetection,
 idPorteur, porteur, solutions }]`. `code` (`R1`, `R2`…) est le rang du risque dans son projet, calculé à la lecture.
@@ -398,21 +390,19 @@ seulement s'il est compris entre 0 et 1.
 
 Ces types doivent exister dans la base réelle (créés manuellement, `ddl-auto=none`) :
 
-| Type | Valeurs |
-|---|---|
-| `priorite` | `CRITIQUE`, `HAUTE`, `NORMALE`, `BASSE` |
-| `statut_projet` | `EN_PREPARATION`, `EN_COURS`, `SUSPENDU`, `CLOTURE`, `ARCHIVE` |
-| `statut_sprint` | `PLANIFIE`, `EN_COURS`, `CLOTURER` |
-| `statut_jalon` | `A_VENIR`, `EN_RETARD`, `ATTEINT`, `ANNULER` |
-| `statut_livrable` | `ATTENDU`, `LIVRE`, `REJETE` |
-| `statut_tache` | `A_FAIRE`, `EN_COURS`, `EN_TEST`, `BLOQUEE`, `TERMINEE`, `REPORTEE` |
-| `type_lien` | `DEBUT_DEBUT`, `DEBUT_FIN`, `FIN_DEBUT`, `FIN_FIN` |
-| `statut_partage` | `ACTIF`, `REVOQUE`, `EXPIRE` |
-| `type_analyse_ia` | `ANALYSE_PROJET`, `PLANIFICATION_SPRINT`, `CHARGE_EQUIPE`, `DETECTION_RISQUE`, `SUGGESTION_RISQUE`, `SYNTHESE` |
-| `portee_analyse_ia` | `PROJET`, `SPRINT`, `EQUIPE` |
-| `statut_recommandation` | `PROPOSEE`, `APPLIQUEE`, `REJETEE` |
-| `niveau_risque` | `FAIBLE`, `MOYEN`, `ELEVE`, `CRITIQUE` |
-| `statut_risque` | `OUVERT`, `SOUS_CONTROLE`, `REJETE`, `CLOS` |
+- `priorite` : `CRITIQUE`, `HAUTE`, `NORMALE`, `BASSE`
+- `statut_projet` : `EN_PREPARATION`, `EN_COURS`, `SUSPENDU`, `CLOTURE`, `ARCHIVE`
+- `statut_sprint` : `PLANIFIE`, `EN_COURS`, `CLOTURER`
+- `statut_jalon` : `A_VENIR`, `EN_RETARD`, `ATTEINT`, `ANNULER`
+- `statut_livrable` : `ATTENDU`, `LIVRE`, `REJETE`
+- `statut_tache` : `A_FAIRE`, `EN_COURS`, `EN_TEST`, `BLOQUEE`, `TERMINEE`, `REPORTEE`
+- `type_lien` : `DEBUT_DEBUT`, `DEBUT_FIN`, `FIN_DEBUT`, `FIN_FIN`
+- `statut_partage` : `ACTIF`, `REVOQUE`, `EXPIRE`
+- `type_analyse_ia` : `ANALYSE_PROJET`, `PLANIFICATION_SPRINT`, `CHARGE_EQUIPE`, `DETECTION_RISQUE`, `SUGGESTION_RISQUE`, `SYNTHESE`
+- `portee_analyse_ia` : `PROJET`, `SPRINT`, `EQUIPE`
+- `statut_recommandation` : `PROPOSEE`, `APPLIQUEE`, `REJETEE`
+- `niveau_risque` : `FAIBLE`, `MOYEN`, `ELEVE`, `CRITIQUE`
+- `statut_risque` : `OUVERT`, `SOUS_CONTROLE`, `REJETE`, `CLOS`
 
 La table `habilitations` (matrice des droits, voir section Sécurité) stocke son niveau (`ECRITURE`/`LECTURE`/
 `AUCUN`) en `VARCHAR`, pas en type ENUM natif : table de configuration peu volumineuse, sans le même besoin
@@ -422,11 +412,9 @@ de performance que les entités métier ci-dessus.
 
 Créées manuellement, comme le reste du schéma. Colonnes lues et écrites par le backend :
 
-| Table | Colonnes |
-|---|---|
-| `ia_analyses` | `id_analyse`, `id_projet`, `id_demandeur` (NULL = analyse automatique), `type_analyse`, `portee`, `question`, `reponse`, `contexte` (jsonb), `indice_confiance` (numeric 4,3), `modele`, `date_creation` |
-| `ia_recommandations` | `id_recommandation`, `id_analyse`, `id_risque` (NULL possible ; NULL = recommandation de pilotage, non liée à un risque), `libelle`, `justification`, `action_proposee` (jsonb : `type`, paramètres, `gain`), `statut`, `id_validateur`, `motif_rejet`, `date_validation`, `resultat_application` (jsonb), `date_creation` |
-| `risques` | `id_risque`, `id_projet`, `id_analyse`, `id_porteur`, `libelle` (300), `description`, `probabilite`, `impact`, `niveau`, `statut`, `mesure_mitigation`, `date_creation`, `date_mise_a_jour` |
-| `points_information` | `id_point_information`, `id_projet`, `id_auteur`, `titre`, `corps`, `date_creation` |
-| `habilitations` | `id`, `module`, `fonction`, `role_nom`, `niveau` (`VARCHAR`) — contrainte unique (`fonction`, `role_nom`) |
-| `pieces_jointes_commentaires` | `id_piece_jointe`, `id_commentaire` (unique), `nom_fichier`, `type_contenu`, `taille`, `contenu` (`BYTEA`), `date_creation` |
+- `ia_analyses` : `id_analyse`, `id_projet`, `id_demandeur` (NULL = analyse automatique), `type_analyse`, `portee`, `question`, `reponse`, `contexte` (jsonb), `indice_confiance` (numeric 4,3), `modele`, `date_creation`
+- `ia_recommandations` : `id_recommandation`, `id_analyse`, `id_risque` (NULL possible ; NULL = recommandation de pilotage, non liée à un risque), `libelle`, `justification`, `action_proposee` (jsonb : `type`, paramètres, `gain`), `statut`, `id_validateur`, `motif_rejet`, `date_validation`, `resultat_application` (jsonb), `date_creation`
+- `risques` : `id_risque`, `id_projet`, `id_analyse`, `id_porteur`, `libelle` (300), `description`, `probabilite`, `impact`, `niveau`, `statut`, `mesure_mitigation`, `date_creation`, `date_mise_a_jour`
+- `points_information` : `id_point_information`, `id_projet`, `id_auteur`, `titre`, `corps`, `date_creation`
+- `habilitations` : `id`, `module`, `fonction`, `role_nom`, `niveau` (`VARCHAR`) — contrainte unique (`fonction`, `role_nom`)
+- `pieces_jointes_commentaires` : `id_piece_jointe`, `id_commentaire` (unique), `nom_fichier`, `type_contenu`, `taille`, `contenu` (`BYTEA`), `date_creation`
