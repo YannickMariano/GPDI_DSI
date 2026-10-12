@@ -8,6 +8,7 @@ import mg.gov.mef.dsi.gpdi.entity.StatutSprint;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.SprintChevauchementException;
 import mg.gov.mef.dsi.gpdi.exception.SprintIntrouvableException;
+import mg.gov.mef.dsi.gpdi.exception.SprintPrecedentNonClotureException;
 import mg.gov.mef.dsi.gpdi.exception.StatutSprintInvalideException;
 import mg.gov.mef.dsi.gpdi.mapper.SprintMapper;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
@@ -21,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -322,6 +324,71 @@ class SprintServiceImplTest {
 
         assertThatThrownBy(() -> service.commencer(1L, 10L))
                 .isInstanceOf(StatutSprintInvalideException.class);
+    }
+
+    @Test
+    void commencer_avantSaDateMaisSprintPrecedentNonCloture_leveSprintPrecedentNonClotureException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        Sprint precedent = sprintDuProjet(projet, 9L, StatutSprint.EN_COURS, LocalDate.now().minusWeeks(2));
+        Sprint sprint = sprintDuProjet(projet, 10L, StatutSprint.PLANIFIE, LocalDate.now().plusWeeks(1));
+
+        when(sprintRepository.findById(10L)).thenReturn(Optional.of(sprint));
+        when(sprintRepository.findByProjetId(1L)).thenReturn(Arrays.asList(precedent, sprint));
+
+        assertThatThrownBy(() -> service.commencer(1L, 10L))
+                .isInstanceOf(SprintPrecedentNonClotureException.class);
+    }
+
+    @Test
+    void commencer_avantSaDateEtSprintPrecedentCloture_passeEnCours() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        Sprint precedent = sprintDuProjet(projet, 9L, StatutSprint.CLOTURER, LocalDate.now().minusWeeks(2));
+        Sprint sprint = sprintDuProjet(projet, 10L, StatutSprint.PLANIFIE, LocalDate.now().plusWeeks(1));
+
+        when(sprintRepository.findById(10L)).thenReturn(Optional.of(sprint));
+        when(sprintRepository.findByProjetId(1L)).thenReturn(Arrays.asList(precedent, sprint));
+        when(sprintRepository.save(sprint)).thenReturn(sprint);
+        when(sprintMapper.toResponse(sprint)).thenReturn(new SprintResponse());
+
+        service.commencer(1L, 10L);
+
+        assertThat(sprint.getStatut()).isEqualTo(StatutSprint.EN_COURS);
+    }
+
+    @Test
+    void demarrerLesSprintsArrivesADateDeDebut_demarreSeulementSiLePrecedentEstCloture() {
+        Projet projetA = new Projet();
+        projetA.setId(1L);
+        Sprint precedentCloture = sprintDuProjet(projetA, 1L, StatutSprint.CLOTURER, LocalDate.now().minusWeeks(2));
+        Sprint aDemarrer = sprintDuProjet(projetA, 2L, StatutSprint.PLANIFIE, LocalDate.now());
+
+        Projet projetB = new Projet();
+        projetB.setId(2L);
+        Sprint precedentEnRetard = sprintDuProjet(projetB, 3L, StatutSprint.EN_COURS, LocalDate.now().minusWeeks(2));
+        Sprint enAttente = sprintDuProjet(projetB, 4L, StatutSprint.PLANIFIE, LocalDate.now());
+
+        when(sprintRepository.findByStatutAndDateDebutLessThanEqualOrderByDateDebutAsc(StatutSprint.PLANIFIE, LocalDate.now()))
+                .thenReturn(Arrays.asList(aDemarrer, enAttente));
+        when(sprintRepository.findByProjetId(1L)).thenReturn(Arrays.asList(precedentCloture, aDemarrer));
+        when(sprintRepository.findByProjetId(2L)).thenReturn(Arrays.asList(precedentEnRetard, enAttente));
+
+        service.demarrerLesSprintsArrivesADateDeDebut();
+
+        assertThat(aDemarrer.getStatut()).isEqualTo(StatutSprint.EN_COURS);
+        assertThat(enAttente.getStatut()).isEqualTo(StatutSprint.PLANIFIE);
+    }
+
+    private Sprint sprintDuProjet(Projet projet, Long id, StatutSprint statut, LocalDate dateDebut) {
+        Sprint sprint = new Sprint();
+        sprint.setId(id);
+        sprint.setNom("Sprint " + id);
+        sprint.setProjet(projet);
+        sprint.setStatut(statut);
+        sprint.setDateDebut(dateDebut);
+        sprint.setDateFin(dateDebut.plusDays(13));
+        return sprint;
     }
 
     @Test

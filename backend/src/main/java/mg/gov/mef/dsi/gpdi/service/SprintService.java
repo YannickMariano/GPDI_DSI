@@ -20,4 +20,7 @@ public interface SprintService {
     SprintResponse commencer(Long idProjet, Long id);
 
     SprintResponse terminer(Long idProjet, Long id);
+
+    /** Demarre les sprints planifies dont la date de debut est arrivee, si le sprint precedent est cloture. */
+    void demarrerLesSprintsArrivesADateDeDebut();
 }

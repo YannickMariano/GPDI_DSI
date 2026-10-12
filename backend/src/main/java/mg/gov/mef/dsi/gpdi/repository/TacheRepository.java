@@ -16,5 +16,9 @@ public interface TacheRepository extends JpaRepository<Tache, Long> {
 
     List<Tache> findBySprintId(Long idSprint);
 
+    long countByProjetId(Long idProjet);
+
+    long countByProjetIdAndStatut(Long idProjet, StatutTache statut);
+
     List<Tache> findByDateFinPrevueLessThanEqualAndStatutNot(LocalDate limite, StatutTache statut);
 }

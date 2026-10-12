@@ -1,0 +1,56 @@
+<div class="diffusions">
+  <aside class="diffusions__catalogue">
+    <h2>{{ estDirecteur() ? 'Rapports diffusés' : 'Diffusion' }}</h2>
+    <p class="diffusions__intro">
+      {{ estDirecteur() ? 'Rapports diffusés par les chefs de projet sur tous les projets.' : 'Rapports diffusés par le chef de projet sur vos projets.' }}
+      Consultation en lecture seule.
+    </p>
+
+    @if (projets().length > 1) {
+      <select class="diffusions__project-select" aria-label="Filtrer par projet" [value]="projetFiltre()" (change)="projetFiltre.set($any($event.target).value)">
+        <option value="">Tous les projets</option>
+        @for (p of projets(); track p.id) {
+          <option [value]="p.id">{{ p.nom }}</option>
+        }
+      </select>
+    }
+
+    <ul class="diffusions__list">
+      @for (r of rapports(); track r.id) {
+        <li>
+          <button type="button" class="diffusions__item" [class.diffusions__item--active]="r.id === rapportSelectionne()?.id" (click)="selectRapport(r.id)">
+            <span class="diffusions__item-name">{{ r.nom }}</span>
+            <span class="diffusions__item-project">{{ r.nomProjet }}</span>
+            <span class="diffusions__item-meta">Diffusé le {{ formatDateFr(r.dateDiffusion) }} · {{ r.auteur }}</span>
+          </button>
+        </li>
+      }
+    </ul>
+  </aside>
+
+  <section class="diffusions__preview">
+    @if (rapportSelectionne(); as rapport) {
+      <div class="diffusions__toolbar">
+        <div>
+          <span class="diffusions__report-name">{{ rapport.nom }}</span>
+          <span class="diffusions__report-meta">{{ rapport.nomProjet }} · diffusé le {{ formatDateFr(rapport.dateDiffusion) }} par {{ rapport.auteur }} · lecture seule</span>
+        </div>
+        <button type="button" class="diffusions__export" [disabled]="!rapport.document || exportEnCours()" (click)="exporterPdf()">
+          {{ exportEnCours() ? 'Export PDF…' : 'Exporter PDF' }}
+        </button>
+      </div>
+
+      @if (rapport.document; as doc) {
+        <app-report-document [doc]="doc" />
+      } @else {
+        <app-empty-state icon="▦" title="Contenu du rapport illisible" description="Ce rapport diffusé ne peut pas être affiché." />
+      }
+    } @else if (charge()) {
+      <app-empty-state
+        icon="▦"
+        title="Aucun rapport diffusé"
+        [description]="estDirecteur() ? 'Les rapports diffusés par les chefs de projet apparaîtront ici.' : 'Les rapports diffusés par le chef de projet de vos projets apparaîtront ici.'"
+      />
+    }
+  </section>
+</div>

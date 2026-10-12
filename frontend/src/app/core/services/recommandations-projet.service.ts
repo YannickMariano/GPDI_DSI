@@ -101,7 +101,10 @@ export class RecommandationsProjetService {
     this.marquer(projectId, true);
     try {
       const dtos = await firstValueFrom(
-        this.http.post<RecommandationProjetResponse[]>(`${environment.apiUrl}/projets/${projectId}/recommandations/analyser`, {}),
+        // Erreur gérée par la page (message adapté en cas de saturation de l'IA) : pas de toast global.
+        this.http.post<RecommandationProjetResponse[]>(`${environment.apiUrl}/projets/${projectId}/recommandations/analyser`, {}, {
+          context: new HttpContext().set(SANS_TOAST_ERREUR, true),
+        }),
       );
       const nouvelles = dtos.map((dto) => versRecommandation(dto, projectId));
       this._recommandations.update((list) => [...list, ...nouvelles]);

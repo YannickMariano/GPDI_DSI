@@ -73,7 +73,7 @@
           <select id="eqChef" class="select" formControlName="chefId" [class.input--invalid]="form.controls.chefId.invalid && form.controls.chefId.touched">
             <option value="" disabled>Sélectionner un chef d'équipe</option>
             @for (chef of chefsDisponibles(); track chef.id) {
-              <option [value]="chef.id">{{ chef.nom }}</option>
+              <option [value]="chef.id">{{ chef.nom }}{{ chef.direction ? ' — ' + chef.direction : '' }}</option>
             }
           </select>
         </div>
@@ -113,6 +113,9 @@
                 <input type="checkbox" [checked]="membreCoche(membre.id)" (change)="toggleMembre(membre.id)" />
                 <app-avatar [initiales]="membre.initiales" [bg]="membre.avatarBg" [size]="22" />
                 <span>{{ membre.nom }}</span>
+                @if (membre.direction) {
+                  <span class="admin-team__member-specialite">{{ membre.direction }}</span>
+                }
               </label>
             } @empty {
               <span class="admin-team__no-members">Aucun membre ne correspond à cette recherche.</span>

@@ -40,11 +40,11 @@ public class EquipeServiceImpl implements EquipeService {
 
     /**
      * Le "chef d'équipe" n'est pas un rôle applicatif à part (pas de login dédié) : c'est une
-     * désignation portée par un membre d'équipe ou un chef de projet pour la durée de son mandat
-     * sur une équipe donnée. Un chef de projet peut aussi faire partie d'une équipe DSI.
+     * désignation portée par un membre d'équipe pour la durée de son mandat sur une équipe donnée.
+     * Seuls les utilisateurs de rôle membre_equipe peuvent être chef d'équipe ou membre d'une équipe.
      */
     private static final Set<String> ROLES_ELIGIBLES = new LinkedHashSet<>(
-            Arrays.asList("membre_equipe", "chef_projet"));
+            Arrays.asList("membre_equipe"));
 
     private final EquipeRepository equipeRepository;
     private final MembreEquipeRepository membreEquipeRepository;

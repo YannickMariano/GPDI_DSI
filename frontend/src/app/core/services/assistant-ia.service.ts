@@ -1,7 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '@environments/environment';
+import { SANS_TOAST_ERREUR } from '@core/interceptors/error.interceptor';
 import { ChatMessage } from '@core/models/ai-recommendation.model';
 
 interface MessageAssistantResponse {
@@ -71,7 +72,10 @@ export class AssistantIaService {
     this._enCours.update((courant) => new Set(courant).add(projectId));
     try {
       const dto = await firstValueFrom(
-        this.http.post<MessageAssistantResponse>(`${environment.apiUrl}/projets/${projectId}/assistant/messages`, { question }),
+        // Erreur gérée par la page (message adapté en cas de saturation de l'IA) : pas de toast global.
+        this.http.post<MessageAssistantResponse>(`${environment.apiUrl}/projets/${projectId}/assistant/messages`, { question }, {
+          context: new HttpContext().set(SANS_TOAST_ERREUR, true),
+        }),
       );
       this._messages.update((list) => [
         ...list,

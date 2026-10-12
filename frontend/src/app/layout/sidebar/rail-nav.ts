@@ -40,6 +40,7 @@ export function railItemsForRole(role: Role): RailItem[] {
         { icone: '▤', libelle: 'Mes projets', route: '/projets' },
         { icone: '◫', libelle: 'Mon travail', route: '/mon-travail', badgeKey: 'monTravail' },
         { icone: '◑', libelle: 'Saisie des temps', route: '/temps' },
+        { icone: '▦', libelle: 'Diffusion', route: '/diffusions' },
       ];
     case Role.DirectionMetier:
       return [

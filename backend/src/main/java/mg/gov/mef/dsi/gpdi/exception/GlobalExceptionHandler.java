@@ -106,6 +106,12 @@ public class GlobalExceptionHandler {
                         .body(new ErreurResponse(exception.getMessage()));
         }
 
+        @ExceptionHandler(SprintPrecedentNonClotureException.class)
+        public ResponseEntity<ErreurResponse> gererSprintPrecedentNonCloture(SprintPrecedentNonClotureException exception) {
+                return ResponseEntity.badRequest()
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
         @ExceptionHandler(JalonIntrouvableException.class)
         public ResponseEntity<ErreurResponse> gererJalonIntrouvable(JalonIntrouvableException exception) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)

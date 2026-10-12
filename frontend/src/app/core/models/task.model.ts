@@ -51,6 +51,8 @@ export interface Task {
   tempsPasseHeures: number;
   /** Horodatage de démarrage du chronomètre (saisie de temps) ; absent si la tâche n'est pas en cours de saisie. */
   demarreeLe?: string;
+  /** Tâche terminée après la date de fin de son sprint (la clôture reste permise, elle est seulement signalée). */
+  depasseSprint: boolean;
   complexite: number;
   iaComplexiteSuggeree?: number;
   iaConfiance?: number;

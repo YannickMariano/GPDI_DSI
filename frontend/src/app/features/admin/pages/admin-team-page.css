@@ -258,6 +258,12 @@
   color: var(--color-text-secondary);
 }
 
+.admin-team__member-specialite {
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
 .admin-team__member-option:hover {
   background: var(--color-surface-muted);
 }

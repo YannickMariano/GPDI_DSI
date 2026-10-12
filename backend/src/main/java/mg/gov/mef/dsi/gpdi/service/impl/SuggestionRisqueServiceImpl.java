@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
-import mg.gov.mef.dsi.gpdi.client.OllamaClient;
+import mg.gov.mef.dsi.gpdi.client.ModeleIaClient;
 import mg.gov.mef.dsi.gpdi.dto.response.ContexteProjetIa;
 import mg.gov.mef.dsi.gpdi.dto.response.ReponseSuggestionRisque;
 import mg.gov.mef.dsi.gpdi.dto.response.ReponseSuggestionRisque.SolutionProposee;
@@ -54,7 +54,7 @@ public class SuggestionRisqueServiceImpl implements SuggestionRisqueService {
 
     private final ContexteProjetService contexteProjetService;
     private final ReponseSuggestionRisqueService reponseSuggestionRisqueService;
-    private final OllamaClient ollamaClient;
+    private final ModeleIaClient ollamaClient;
     private final RisqueRepository risqueRepository;
     private final IaAnalyseRepository iaAnalyseRepository;
     private final IaRecommandationRepository iaRecommandationRepository;

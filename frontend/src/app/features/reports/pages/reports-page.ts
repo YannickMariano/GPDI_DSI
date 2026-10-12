@@ -12,7 +12,10 @@ import { criticiteRisque, Criticite } from '@core/models/risk.model';
 import { StatutTache, Task } from '@core/models/task.model';
 import { ReportDocument, ReportKpi, Ton } from '@core/models/report.model';
 import { ToastService } from '@shared/components/toast/toast.service';
-import { formatDateFr } from '@shared/utils/format.util';
+import { formatDateFr, formatHours } from '@shared/utils/format.util';
+import { exporterRapportPdf } from '@shared/utils/export-pdf.util';
+import { ReportDocumentView } from '@shared/components/report-document/report-document';
+import { RapportsDiffusesService } from '@core/services/rapports-diffuses.service';
 
 const CRITICITE_LABEL: Record<Criticite, { label: string; ton: Ton }> = {
   critique: { label: 'Critique', ton: 'erreur' },
@@ -39,17 +42,19 @@ const SANTE_LABEL: Record<string, { label: string; ton: Ton }> = {
 const MEF = "Ministère de l'Économie et des Finances — DSI";
 const kpi = (libelle: string, valeur: string, delta: string, ton: Ton): ReportKpi => ({ libelle, valeur, delta, ton });
 
-const TON_COLOR: Record<Ton, string> = {
-  succes: 'var(--color-success-text)',
-  alerte: 'var(--color-alert)',
-  erreur: 'var(--color-error-text)',
-  neutre: 'var(--color-text-tertiary)',
+/** Heures arrondies à l'heure entière, sans décimale, avec les jours au-delà de 24 h (ex. « 12 h », « 12 j 5 h »). */
+const heures = (valeur: number): string => formatHours(Math.round(valeur));
+/** Écart d'heures arrondi, avec son signe (ex. « +12 h », « -1 j 3 h »). */
+const heuresSignees = (valeur: number): string => {
+  const arrondi = Math.round(valeur);
+  return `${arrondi >= 0 ? '+' : ''}${formatHours(arrondi)}`;
 };
 
 @Component({
   selector: 'app-reports-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './reports-page.html',
+  imports: [ReportDocumentView],
   styleUrl: './reports-page.css',
 })
 export class ReportsPage {
@@ -63,9 +68,9 @@ export class ReportsPage {
   private readonly peopleService = inject(PeopleService);
   private readonly recommandationsService = inject(RecommandationsProjetService);
   private readonly toast = inject(ToastService);
+  private readonly rapportsDiffusesService = inject(RapportsDiffusesService);
 
   protected readonly formatDateFr = formatDateFr;
-  protected readonly tonColor = TON_COLOR;
   protected readonly templates = this.reportsService.templates;
   protected readonly selectedId = signal(this.templates()[0]?.id ?? '');
   protected readonly selectedTemplate = computed(() => this.templates().find((t) => t.id === this.selectedId()));
@@ -100,8 +105,9 @@ export class ReportsPage {
       this.risquesService.ensureLoaded(id);
       this.recommandationsService.ensureLoaded(id);
     });
-    // Le rapport « Portefeuille » lit l'avancement, les sprints et le prochain jalon de tous les projets.
-    effect(() => this.projectsService.chargerIndicateurs());
+    // Le rapport « Portefeuille » lit l'avancement, les sprints et le prochain jalon des projets ; seuls ceux
+    // accessibles à l'utilisateur sont chargés (les autres renverraient un refus d'accès affiché en alerte).
+    effect(() => this.projectsService.chargerIndicateurs(this.projetsDisponibles().map((p) => p.id)));
   }
 
   protected readonly document = computed<ReportDocument>(() => {
@@ -121,10 +127,6 @@ export class ReportsPage {
     }
   });
 
-  colonnesGrid(colonnes: { largeur: string }[]): string {
-    return colonnes.map((c) => c.largeur).join(' ');
-  }
-
   selectProjet(id: string): void {
     this.projetChoisi.set(id);
   }
@@ -133,12 +135,36 @@ export class ReportsPage {
     this.selectedId.set(id);
   }
 
-  exporter(format: 'PDF' | 'Excel'): void {
-    this.toast.show({ type: 'success', message: `Export ${format} généré.` });
+  protected readonly exportEnCours = signal(false);
+
+  /** Télécharge le rapport affiché au format PDF. */
+  async exporterPdf(): Promise<void> {
+    if (this.exportEnCours()) return;
+    this.exportEnCours.set(true);
+    try {
+      await exporterRapportPdf(`${this.document().nom} — ${this.projet()?.nom ?? 'GPDI'}`);
+    } catch {
+      this.toast.show({ type: 'error', message: "L'export PDF a échoué. Veuillez réessayer." });
+    } finally {
+      this.exportEnCours.set(false);
+    }
   }
 
-  diffuser(): void {
-    this.toast.show({ type: 'success', message: 'Rapport diffusé aux parties prenantes.' });
+  protected readonly diffusionEnCours = signal(false);
+
+  /** Diffuse le modèle de rapport sélectionné (photo figée) aux membres concernés du projet et au Directeur DSI. */
+  async diffuser(): Promise<void> {
+    const projetId = this.projetId();
+    if (!projetId || this.diffusionEnCours()) return;
+    this.diffusionEnCours.set(true);
+    try {
+      const rapport = await this.rapportsDiffusesService.diffuser(projetId, this.selectedId(), this.document());
+      this.toast.show({ type: 'success', message: `« ${rapport.nom} » diffusé aux membres du projet et au Directeur DSI.` });
+    } catch {
+      // Message d'erreur déjà affiché par l'intercepteur HTTP global.
+    } finally {
+      this.diffusionEnCours.set(false);
+    }
   }
 
   // --- Avancement hebdomadaire ---
@@ -163,7 +189,7 @@ export class ReportsPage {
       chiffres: [
         kpi('Avancement', `${p?.avancement ?? 0} %`, 'progression du projet', 'succes'),
         kpi('Tâches livrées', `${terminees}`, `sur ${taches.length} tâche(s)`, 'succes'),
-        kpi('Heures consommées', `${p?.heuresConsommees ?? 0} h`, 'cumul projet', 'alerte'),
+        kpi('Heures consommées', heures(p?.heuresConsommees ?? 0), 'cumul projet', 'alerte'),
         kpi('Risques ouverts', `${this.risquesActifs().length}`, 'suivi hebdomadaire', this.risquesActifs().length > 0 ? 'erreur' : 'succes'),
       ],
       sections: [
@@ -222,7 +248,7 @@ export class ReportsPage {
       periode: sprint ? `Du ${formatDateFr(sprint.dateDebut)} au ${formatDateFr(sprint.dateFin)}` : 'Aucun sprint suivi',
       pages: 'page 1 / 1',
       chiffres: [
-        kpi('Charge livrée', `${chargeLivree} h`, `sur ${estimeTotal} h engagées`, 'succes'),
+        kpi('Charge livrée', heures(chargeLivree), `sur ${heures(estimeTotal)} engagées`, 'succes'),
         kpi('Engagement tenu', `${engagementTenu} %`, 'objectif 85 %', engagementTenu >= 85 ? 'succes' : 'alerte'),
         kpi('Éléments reportés', `${reportees.length}`, `sur ${taches.length} engagés`, reportees.length > 0 ? 'alerte' : 'succes'),
         kpi('Tâches bloquées', `${taches.filter((t) => t.statut === 'bloquee').length}`, sprintClos ? 'à date de clôture' : 'à date du jour', 'erreur'),
@@ -234,8 +260,8 @@ export class ReportsPage {
             colonnes: [{ libelle: 'Élément', largeur: '1.6fr' }, { libelle: 'Estimé', largeur: '0.6fr', align: 'right' }, { libelle: 'Réalisé', largeur: '0.6fr', align: 'right' }, { libelle: 'État', largeur: '0.8fr' }],
             lignes: taches.map((t) => [
               { texte: `${t.code} — ${t.titre}` },
-              { texte: `${t.estimeHeures} h` },
-              { texte: `${t.tempsPasseHeures} h` },
+              { texte: heures(t.estimeHeures) },
+              { texte: heures(t.tempsPasseHeures) },
               { texte: STATUT_TACHE_LABEL[t.statut].label, ton: STATUT_TACHE_LABEL[t.statut].ton, accent: true },
             ]),
           },
@@ -345,9 +371,9 @@ export class ReportsPage {
       periode: `Cumul projet · ${lignesAgents.length} agent(s)`,
       pages: 'page 1 / 1',
       chiffres: [
-        kpi('Heures saisies', `${heuresSaisies} h`, 'cumul projet', 'neutre'),
-        kpi('Heures prévues', `${heuresPrevues} h`, 'estimations validées', 'neutre'),
-        kpi('Écart', `${ecart >= 0 ? '+' : ''}${ecart} h`, ecart > 0 ? 'au-delà du prévu' : 'dans le prévu', ecart > 0 ? 'alerte' : 'succes'),
+        kpi('Heures saisies', heures(heuresSaisies), 'cumul projet', 'neutre'),
+        kpi('Heures prévues', heures(heuresPrevues), 'estimations validées', 'neutre'),
+        kpi('Écart', heuresSignees(ecart), ecart > 0 ? 'au-delà du prévu' : 'dans le prévu', ecart > 0 ? 'alerte' : 'succes'),
         kpi('Tâches en dépassement', `${depassements.length}`, `sur ${taches.length} tâches`, depassements.length > 0 ? 'alerte' : 'succes'),
       ],
       sections: [
@@ -359,9 +385,9 @@ export class ReportsPage {
               const e = l.passe - l.estime;
               return [
                 { texte: l.personne!.nom },
-                { texte: `${l.estime} h` },
-                { texte: `${l.passe} h` },
-                { texte: `${e >= 0 ? '+' : ''}${e} h`, ton: e > 0 ? 'alerte' : 'succes', accent: true },
+                { texte: heures(l.estime) },
+                { texte: heures(l.passe) },
+                { texte: heuresSignees(e), ton: e > 0 ? 'alerte' : 'succes', accent: true },
               ];
             }),
           },
@@ -372,11 +398,17 @@ export class ReportsPage {
             colonnes: [{ libelle: 'Tâche', largeur: '2fr' }, { libelle: 'Estimé', largeur: '0.7fr', align: 'right' }, { libelle: 'Saisi', largeur: '0.7fr', align: 'right' }, { libelle: 'Avancement', largeur: '0.8fr', align: 'right' }],
             lignes: topTaches.map((t) => {
               const pct = t.estimeHeures > 0 ? Math.round((t.tempsPasseHeures / t.estimeHeures) * 100) : 0;
+              // Un avancement ne dépasse jamais 100 % : au-delà de l'estimation, on affiche 100 % et le dépassement en heures.
+              const depasse = pct > 100;
               return [
                 { texte: `${t.code} — ${t.titre}` },
-                { texte: `${t.estimeHeures} h` },
-                { texte: `${t.tempsPasseHeures} h` },
-                { texte: `${pct} %`, ton: pct > 100 ? 'erreur' : 'succes', accent: true },
+                { texte: heures(t.estimeHeures) },
+                { texte: heures(t.tempsPasseHeures) },
+                {
+                  texte: depasse ? `100 % · dépassé de ${heures(t.tempsPasseHeures - t.estimeHeures)}` : `${pct} %`,
+                  ton: depasse ? 'erreur' : 'succes',
+                  accent: true,
+                },
               ];
             }),
           },
@@ -397,7 +429,8 @@ export class ReportsPage {
   // --- Portefeuille DSI ---
 
   private documentPortefeuille(): ReportDocument {
-    const projets = this.projectsService.projects();
+    // Limité aux projets de l'utilisateur : ceux du chef de projet dans son espace, tous pour le Directeur DSI.
+    const projets = this.projetsDisponibles();
     const actifs = projets.filter((p) => p.statut === 'en_cours');
     const aRisque = projets.filter((p) => p.sante === 'a_risque');
     const clotures = projets.filter((p) => p.statut === 'cloture');

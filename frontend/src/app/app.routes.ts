@@ -64,6 +64,11 @@ export const routes: Routes = [
         loadChildren: () => import('@features/reports/reports.routes').then((m) => m.REPORTS_ROUTES),
       },
       {
+        path: 'diffusions',
+        canActivate: [roleGuard(Role.MembreEquipe)],
+        loadChildren: () => import('@features/diffusions/diffusions.routes').then((m) => m.DIFFUSIONS_ROUTES),
+      },
+      {
         path: 'alertes',
         loadChildren: () => import('@features/notifications/notifications.routes').then((m) => m.NOTIFICATIONS_ROUTES),
       },

@@ -10,6 +10,12 @@
     <div class="task-card__blocked">Bloquée par {{ bloquante.code }}</div>
   }
 
+  @if (task().depasseSprint) {
+    <div class="task-card__late">Sprint dépassé</div>
+  } @else if (enRetardSurSprint()) {
+    <div class="task-card__late">En retard · sprint dépassé</div>
+  }
+
   @if (task().sousTaches.length > 0) {
     <div class="task-card__subtasks">☑ {{ subTasksDoneLabel() }}</div>
   }

@@ -13,7 +13,7 @@ import { AiSuggestionChip } from '@shared/components/ai-suggestion-chip/ai-sugge
 import { Modal } from '@shared/components/modal/modal';
 import { ConfirmationDialog } from '@shared/components/confirmation-dialog/confirmation-dialog';
 import { ToastService } from '@shared/components/toast/toast.service';
-import { formatDateFr } from '@shared/utils/format.util';
+import { formatDateFr, formatHours } from '@shared/utils/format.util';
 
 const CAPACITE_PAR_DEFAUT_H = 40;
 
@@ -35,6 +35,7 @@ export class BacklogPage {
 
   protected readonly draggedTaskId = signal<string | null>(null);
   protected readonly formatDateFr = formatDateFr;
+  protected readonly formatHours = formatHours;
   protected readonly peutGererSprints = computed(() => this.authService.currentUser()?.role === Role.ChefProjet);
 
   protected readonly backlog = computed(() => this.tasksService.backlog(this.projectId())());
@@ -201,9 +202,29 @@ export class BacklogPage {
 
   // --- Démarrage du sprint ---
 
-  /** Un sprint ne peut démarrer que si aucun autre sprint du projet n'est déjà en cours (le sprint en cours doit d'abord être clôturé). */
+  /**
+   * Un sprint ne peut démarrer que si aucun autre sprint du projet n'est déjà en cours (le sprint en cours doit d'abord être clôturé),
+   * et — démarrage manuel possible avant sa date de début — à condition que le sprint qui le précède soit clôturé.
+   */
   peutDemarrer(sprint: Sprint): boolean {
-    return sprint.statut === 'planifie' && !this.sprintsProjet().some((s) => s.statut === 'en_cours');
+    const precedent = this.sprintPrecedent(sprint);
+    return (
+      sprint.statut === 'planifie' &&
+      !this.sprintsProjet().some((s) => s.statut === 'en_cours') &&
+      (precedent === undefined || precedent.statut === 'cloture')
+    );
+  }
+
+  /** Sprint qui précède immédiatement celui-ci (les sprints se suivent sans chevauchement, triés par date de début). */
+  private sprintPrecedent(sprint: Sprint): Sprint | undefined {
+    return [...this.sprintsProjet()]
+      .filter((s) => s.dateDebut < sprint.dateDebut)
+      .sort((a, b) => b.dateDebut.localeCompare(a.dateDebut))[0];
+  }
+
+  /** Sprint en cours dont la date de fin est dépassée : signalé « En retard », il reste clôturable (mêmes règles de clôture). */
+  estEnRetard(sprint: Sprint): boolean {
+    return sprint.statut === 'en_cours' && sprint.dateFin < dateDuJour();
   }
 
   async demarrerSprint(sprint: Sprint): Promise<void> {
@@ -238,8 +259,51 @@ export class BacklogPage {
     try {
       await this.sprintsService.cloturer(sprint.id);
       this.toast.show({ type: 'success', message: `${sprint.nom} clôturé.` });
+      // Le backend démarre aussitôt le sprint suivant si sa date de début est déjà arrivée : on recharge pour l'afficher.
+      this.sprintsService.reload(this.projectId());
     } finally {
       this.sprintACloturer.set(null);
     }
   }
+
+  // --- Report d'une tâche vers un autre sprint ---
+
+  protected readonly tacheAReporter = signal<{ taskId: string; code: string; sprintId: string } | null>(null);
+  protected readonly sprintCibleReport = signal('');
+
+  /** Sprints pouvant recevoir la tâche : ni clôturés, ni le sprint où elle se trouve déjà. */
+  protected readonly sprintsCiblesReport = computed(() => {
+    const origine = this.tacheAReporter()?.sprintId;
+    return this.sprintsAffiches().filter((s) => s.statut !== 'cloture' && s.id !== origine);
+  });
+
+  ouvrirReport(taskId: string, code: string, sprintId: string): void {
+    this.tacheAReporter.set({ taskId, code, sprintId });
+    this.sprintCibleReport.set('');
+  }
+
+  fermerReport(): void {
+    this.tacheAReporter.set(null);
+  }
+
+  async confirmerReport(): Promise<void> {
+    const report = this.tacheAReporter();
+    const cible = this.sprintsCiblesReport().find((s) => s.id === this.sprintCibleReport());
+    if (!report || !cible) return;
+    try {
+      await this.tasksService.moveToSprint(report.taskId, cible.id);
+      this.toast.show({ type: 'success', message: `${report.code} reportée dans ${cible.nom}.` });
+      this.tacheAReporter.set(null);
+    } catch {
+      // Message d'erreur déjà affiché par l'intercepteur HTTP global.
+    }
+  }
+}
+
+/** Date du jour au format AAAA-MM-JJ (heure locale), comparable aux dates des sprints. */
+function dateDuJour(): string {
+  const maintenant = new Date();
+  const mois = String(maintenant.getMonth() + 1).padStart(2, '0');
+  const jour = String(maintenant.getDate()).padStart(2, '0');
+  return `${maintenant.getFullYear()}-${mois}-${jour}`;
 }

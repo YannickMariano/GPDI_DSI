@@ -321,3 +321,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+.sprint-card__late {
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sprint-card__task-report {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.sprint-card__task-report:hover {
+  background: var(--color-surface-muted);
+}

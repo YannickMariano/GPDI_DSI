@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProjectsService } from '@core/services/projects.service';
 import { PeopleService } from '@core/services/people.service';
@@ -68,6 +68,9 @@ export class MyProjectsPage {
     this.projectsService.reload();
     this.peopleService.reload();
     this.equipesService.reload();
+    // Charge sprints, tâches et jalons des seuls projets listés ici (ceux accessibles à l'utilisateur) pour
+    // alimenter les indicateurs des cartes (sprint, heures consommées, prochain jalon) sans requête refusée.
+    effect(() => this.projectsService.chargerIndicateurs(this.projets().map((p) => p.id)));
   }
 
   // --- Recherche et filtres ---

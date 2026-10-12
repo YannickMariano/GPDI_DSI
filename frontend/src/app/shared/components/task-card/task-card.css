@@ -104,6 +104,17 @@
   font-weight: 500;
 }
 
+.task-card__late {
+  display: flex;
+  align-items: center;
+  padding: 5px 8px;
+  background: var(--color-alert-bg);
+  border-radius: 5px;
+  font-size: 11.5px;
+  color: var(--color-alert);
+  font-weight: 500;
+}
+
 .task-card__subtasks {
   font-family: var(--font-mono);
   font-size: 11px;

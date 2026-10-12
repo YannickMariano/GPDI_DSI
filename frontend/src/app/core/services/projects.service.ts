@@ -112,12 +112,16 @@ export class ProjectsService {
       .catch(() => undefined);
   }
 
-  /** Charge sprints, tâches et jalons de chaque projet (une seule fois) pour alimenter les indicateurs des projets. */
-  chargerIndicateurs(): void {
-    for (const projet of this._projects()) {
-      this.sprintsService.ensureLoaded(projet.id);
-      this.tasksService.ensureLoaded(projet.id);
-      this.milestonesService.ensureLoaded(projet.id);
+  /**
+   * Charge sprints, tâches et jalons de chaque projet (une seule fois) pour alimenter les indicateurs des projets.
+   * `projetIds` limite le chargement à ces projets (ex. ceux réellement accessibles à l'utilisateur) ; absent = tous les projets.
+   */
+  chargerIndicateurs(projetIds?: string[]): void {
+    const ids = projetIds ?? this._projects().map((p) => p.id);
+    for (const id of ids) {
+      this.sprintsService.ensureLoaded(id);
+      this.tasksService.ensureLoaded(id);
+      this.milestonesService.ensureLoaded(id);
     }
   }
 

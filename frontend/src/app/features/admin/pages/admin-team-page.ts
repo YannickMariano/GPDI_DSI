@@ -34,8 +34,9 @@ export class AdminTeamPage {
     this.projectsService.reload();
   }
 
-  // Le "chef d'équipe" n'est pas un rôle applicatif à part : c'est un membre d'équipe ou un chef de projet désigné responsable de cette équipe (pas de login dédié).
-  private readonly rolesEligibles = computed(() => this.peopleService.people().filter((p) => p.role === Role.MembreEquipe || p.role === Role.ChefProjet));
+  // Le "chef d'équipe" n'est pas un rôle applicatif à part : c'est un membre d'équipe désigné responsable de cette équipe (pas de login dédié).
+  // Seuls les utilisateurs de rôle « membre_equipe » peuvent être chef d'équipe ou membre d'une équipe.
+  private readonly rolesEligibles = computed(() => this.peopleService.people().filter((p) => p.role === Role.MembreEquipe));
   protected readonly chefsDisponibles = computed(() => this.rolesEligibles().filter((p) => p.statut === 'actif'));
   protected readonly membresDisponibles = computed(() => this.rolesEligibles());
 

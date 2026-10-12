@@ -40,12 +40,16 @@ CREATE TABLE IF NOT EXISTS taches (
     temps_estime    DOUBLE PRECISION,
     temps_passe     DOUBLE PRECISION,
     demarree_le     TIMESTAMP,
-    id_sprint       BIGINT REFERENCES sprints(id_sprint),
+    depasse_sprint  BOOLEAN NOT NULL DEFAULT false,
+    id_sprint      BIGINT REFERENCES sprints(id_sprint),
     id_projet       BIGINT REFERENCES projets(id_projet)
 );
 
 -- Rattrapage si la table existait deja avant l'ajout du chronometre de suivi du temps.
 ALTER TABLE taches ADD COLUMN IF NOT EXISTS demarree_le TIMESTAMP;
+
+-- Rattrapage si la table existait deja avant le marquage des taches terminees apres la fin de leur sprint.
+ALTER TABLE taches ADD COLUMN IF NOT EXISTS depasse_sprint BOOLEAN NOT NULL DEFAULT false;
 
 -- 3. Assignations d'une tache a des membres de l'equipe (entité AffectationTache)
 CREATE TABLE IF NOT EXISTS affectation_taches (

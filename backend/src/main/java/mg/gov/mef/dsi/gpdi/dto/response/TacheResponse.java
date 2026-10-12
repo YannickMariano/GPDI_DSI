@@ -35,6 +35,8 @@ public class TacheResponse {
 
     private LocalDateTime demarreeLe;
 
+    private boolean depasseSprint;
+
     private Long idSprint;
 
     private String nomSprint;

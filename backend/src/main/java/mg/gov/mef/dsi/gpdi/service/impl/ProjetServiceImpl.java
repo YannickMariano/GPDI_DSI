@@ -6,6 +6,7 @@ import mg.gov.mef.dsi.gpdi.dto.response.ProjetResponse;
 import mg.gov.mef.dsi.gpdi.entity.Equipe;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
+import mg.gov.mef.dsi.gpdi.entity.StatutTache;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
 import mg.gov.mef.dsi.gpdi.exception.EquipeIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
@@ -15,9 +16,11 @@ import mg.gov.mef.dsi.gpdi.exception.UtilisateurNonEligibleException;
 import mg.gov.mef.dsi.gpdi.mapper.ProjetMapper;
 import mg.gov.mef.dsi.gpdi.repository.EquipeRepository;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
+import mg.gov.mef.dsi.gpdi.repository.TacheRepository;
 import mg.gov.mef.dsi.gpdi.repository.UtilisateurRepository;
 import mg.gov.mef.dsi.gpdi.service.HabilitationService;
 import mg.gov.mef.dsi.gpdi.service.ProjetService;
+import mg.gov.mef.dsi.gpdi.util.ProgressionProjet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -52,6 +55,7 @@ public class ProjetServiceImpl implements ProjetService {
     private final EquipeRepository equipeRepository;
     private final ProjetMapper projetMapper;
     private final HabilitationService habilitationService;
+    private final TacheRepository tacheRepository;
 
     @Override
     @Transactional
@@ -175,7 +179,21 @@ public class ProjetServiceImpl implements ProjetService {
     private ProjetResponse versReponseAvecSante(Projet projet) {
         ProjetResponse reponse = projetMapper.toResponse(projet);
         reponse.setSante(calculerSante(projet));
+        reponse.setProgression(calculerProgression(projet));
         return reponse;
+    }
+
+    /** Progression calculee a la lecture (cf. ProgressionProjet) ; 0 si le projet n'a aucune tache. */
+    private int calculerProgression(Projet projet) {
+        if (projet.getId() == null) {
+            return 0;
+        }
+        long total = tacheRepository.countByProjetId(projet.getId());
+        if (total == 0) {
+            return 0;
+        }
+        long terminees = tacheRepository.countByProjetIdAndStatut(projet.getId(), StatutTache.TERMINEE);
+        return ProgressionProjet.calculer(terminees, total);
     }
 
     private String calculerSante(Projet projet) {

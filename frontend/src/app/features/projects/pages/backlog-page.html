@@ -18,7 +18,7 @@
     <section class="backlog__panel" (dragover)="$event.preventDefault()" (drop)="onDrop(undefined)">
       <div class="backlog__panel-header">
         <h2>Backlog</h2>
-        <span class="backlog__meta">{{ backlog().length }} tâches · {{ backlogHeures() }} h estimées</span>
+        <span class="backlog__meta">{{ backlog().length }} tâches · {{ formatHours(backlogHeures()) }} estimées</span>
       </div>
 
       @if (backlog().length > 0) {
@@ -29,7 +29,7 @@
               <span class="backlog__code">{{ task.code }}</span>
               <span class="backlog__title">{{ task.titre }}</span>
               <app-priority-badge [priorite]="task.priorite" />
-              <span class="backlog__points">{{ task.estimeHeures }} h</span>
+              <span class="backlog__points">{{ formatHours(task.estimeHeures) }}</span>
             </div>
           }
         </div>
@@ -50,6 +50,9 @@
               <div class="sprint-card__header">
                 <span class="sprint-card__name">{{ sprint.nom }}</span>
                 <span class="sprint-card__status">{{ sprint.statut === 'en_cours' ? 'En cours' : sprint.statut === 'cloture' ? 'Clôturé' : 'Planifié' }}</span>
+                @if (estEnRetard(sprint)) {
+                  <span class="sprint-card__late" [attr.title]="'Date de fin dépassée (' + formatDateFr(sprint.dateFin) + ')'">En retard</span>
+                }
               </div>
               <div class="sprint-card__dates">{{ formatDateFr(sprint.dateDebut) }} → {{ formatDateFr(sprint.dateFin) }}</div>
               <p class="sprint-card__objectif">{{ sprint.objectif }}</p>
@@ -72,6 +75,9 @@
                       <span class="sprint-card__task-title">{{ task.titre }}</span>
                       <app-priority-badge [priorite]="task.priorite" />
                       <app-status-badge [statut]="task.statut" />
+                      @if (peutGererSprints() && sprint.statut !== 'cloture' && task.statut !== 'terminee') {
+                        <button type="button" class="sprint-card__task-report" (click)="ouvrirReport(task.id, task.code, sprint.id)">Reporter</button>
+                      }
                       @if (peutGererSprints() && sprint.statut !== 'cloture') {
                         <button
                           type="button"
@@ -191,6 +197,37 @@
         <button type="submit" class="form-modal__btn form-modal__btn--primary">{{ modeEditionSprint() ? 'Modifier le sprint' : 'Créer le sprint' }}</button>
       </div>
     </form>
+  </app-modal>
+
+  <app-modal [open]="tacheAReporter() !== null" [width]="420" ariaLabel="Reporter la tâche dans un autre sprint" (close)="fermerReport()">
+    <div class="form-modal">
+      <div class="form-modal__header">
+        <h2>Reporter {{ tacheAReporter()?.code }}</h2>
+        <button type="button" class="form-modal__close" (click)="fermerReport()" aria-label="Fermer">×</button>
+      </div>
+
+      <div class="form-modal__body">
+        @if (sprintsCiblesReport().length > 0) {
+          <div class="field">
+            <label class="field__label" for="reportSprint">Sprint de destination</label>
+            <select id="reportSprint" class="select" [value]="sprintCibleReport()" (change)="sprintCibleReport.set($any($event.target).value)">
+              <option value="" disabled>Sélectionner un sprint</option>
+              @for (s of sprintsCiblesReport(); track s.id) {
+                <option [value]="s.id">{{ s.nom }} · {{ formatDateFr(s.dateDebut) }} → {{ formatDateFr(s.dateFin) }}</option>
+              }
+            </select>
+          </div>
+        } @else {
+          <p class="sprint-card__tasks-empty">Aucun autre sprint non clôturé : créez d'abord un sprint pour y reporter la tâche.</p>
+        }
+      </div>
+
+      <div class="form-modal__footer">
+        <span class="form-modal__note">La tâche quitte ce sprint et rejoint le sprint choisi, avec son statut actuel.</span>
+        <button type="button" class="form-modal__btn form-modal__btn--secondary" (click)="fermerReport()">Annuler</button>
+        <button type="button" class="form-modal__btn form-modal__btn--primary" [disabled]="!sprintCibleReport()" (click)="confirmerReport()">Reporter</button>
+      </div>
+    </div>
   </app-modal>
 
   <app-confirmation-dialog

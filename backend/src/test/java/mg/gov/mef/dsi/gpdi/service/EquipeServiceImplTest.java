@@ -104,37 +104,16 @@ class EquipeServiceImplTest {
     }
 
     @Test
-    void creer_chefProjetCommeChefEtMembre_creeLequipe() {
+    void creer_chefProjetCommeChef_leveUtilisateurNonEligibleException() {
         EquipeRequest request = new EquipeRequest();
         request.setNom("Equipe B");
         request.setIdChefEquipe(1L);
         request.setIdsMembres(Collections.singletonList(2L));
 
-        Utilisateur chef = utilisateurAvecRole(1L, "chef_projet");
-        Utilisateur membre = utilisateurAvecRole(2L, "chef_projet");
+        when(utilisateurRepository.findById(1L)).thenReturn(Optional.of(utilisateurAvecRole(1L, "chef_projet")));
 
-        Equipe equipeAEnregistrer = new Equipe();
-        Equipe equipeEnregistree = new Equipe();
-        equipeEnregistree.setId(11L);
-
-        when(utilisateurRepository.findById(1L)).thenReturn(Optional.of(chef));
-        when(utilisateurRepository.findById(2L)).thenReturn(Optional.of(membre));
-        when(equipeMapper.toEntity(request)).thenReturn(equipeAEnregistrer);
-        when(equipeRepository.save(equipeAEnregistrer)).thenReturn(equipeEnregistree);
-
-        MembreEquipe membreEnregistre = new MembreEquipe();
-        when(membreEquipeRepository.save(any(MembreEquipe.class))).thenReturn(membreEnregistre);
-        when(equipeMapper.toMembreResponse(membreEnregistre))
-                .thenReturn(new MembreEquipeResponse(1L, 2L, "M002", "Nom", "Prenom", true));
-
-        EquipeResponse reponseAttendue = new EquipeResponse();
-        reponseAttendue.setId(11L);
-        when(equipeMapper.toResponse(equipeEnregistree)).thenReturn(reponseAttendue);
-
-        EquipeResponse resultat = service.creer(request);
-
-        assertThat(resultat.getId()).isEqualTo(11L);
-        assertThat(equipeAEnregistrer.getChefEquipe()).isEqualTo(chef);
+        assertThatThrownBy(() -> service.creer(request))
+                .isInstanceOf(UtilisateurNonEligibleException.class);
     }
 
     @Test

@@ -1,7 +1,7 @@
 package mg.gov.mef.dsi.gpdi.service.impl;
 
 import lombok.RequiredArgsConstructor;
-import mg.gov.mef.dsi.gpdi.client.OllamaClient;
+import mg.gov.mef.dsi.gpdi.client.ModeleIaClient;
 import mg.gov.mef.dsi.gpdi.dto.response.ContexteProjetIa;
 import mg.gov.mef.dsi.gpdi.dto.response.ReponseDetectionRisque;
 import mg.gov.mef.dsi.gpdi.dto.response.ReponseDetectionRisque.ReevaluationRisque;
@@ -49,7 +49,7 @@ public class DetectionRisqueServiceImpl implements DetectionRisqueService {
 
     private final ContexteProjetService contexteProjetService;
     private final ReponseDetectionRisqueService reponseDetectionRisqueService;
-    private final OllamaClient ollamaClient;
+    private final ModeleIaClient ollamaClient;
     private final ProjetRepository projetRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final RisqueRepository risqueRepository;

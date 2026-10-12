@@ -13,7 +13,6 @@ import mg.gov.mef.dsi.gpdi.entity.Tache;
 import mg.gov.mef.dsi.gpdi.entity.TachePrecedence;
 import mg.gov.mef.dsi.gpdi.entity.TypeLien;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
-import mg.gov.mef.dsi.gpdi.exception.DateFinTacheInvalideException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.SprintProjetIncoherentException;
 import mg.gov.mef.dsi.gpdi.exception.TacheIntrouvableException;
@@ -402,7 +401,7 @@ class TacheServiceImplTest {
     }
 
     @Test
-    void modifier_passageTermineeSprintDejaCloture_leveDateFinTacheInvalideException() {
+    void modifier_passageTermineeSprintDejaCloture_termineEtMarqueDepassement() {
         Projet projet = new Projet();
         projet.setId(1L);
         Sprint sprint = new Sprint();
@@ -421,9 +420,13 @@ class TacheServiceImplTest {
 
         when(tacheRepository.findById(10L)).thenReturn(Optional.of(tache));
         when(sprintRepository.findById(5L)).thenReturn(Optional.of(sprint));
+        when(tacheRepository.save(tache)).thenReturn(tache);
+        when(tacheMapper.toResponse(tache)).thenReturn(new TacheResponse());
 
-        assertThatThrownBy(() -> service.modifier(1L, 10L, request))
-                .isInstanceOf(DateFinTacheInvalideException.class);
+        service.modifier(1L, 10L, request);
+
+        assertThat(tache.getStatut()).isEqualTo(StatutTache.TERMINEE);
+        assertThat(tache.isDepasseSprint()).isTrue();
     }
 
     @Test
@@ -452,6 +455,7 @@ class TacheServiceImplTest {
         service.modifier(1L, 10L, request);
 
         assertThat(tache.getStatut()).isEqualTo(StatutTache.TERMINEE);
+        assertThat(tache.isDepasseSprint()).isFalse();
     }
 
     @Test

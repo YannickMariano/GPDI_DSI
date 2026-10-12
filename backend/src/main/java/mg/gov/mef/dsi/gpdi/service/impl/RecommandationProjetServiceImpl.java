@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
-import mg.gov.mef.dsi.gpdi.client.OllamaClient;
+import mg.gov.mef.dsi.gpdi.client.ModeleIaClient;
 import mg.gov.mef.dsi.gpdi.dto.request.TacheRequest;
 import mg.gov.mef.dsi.gpdi.dto.response.ContexteProjetIa;
 import mg.gov.mef.dsi.gpdi.dto.response.RecommandationProjetResponse;
@@ -88,7 +88,7 @@ public class RecommandationProjetServiceImpl implements RecommandationProjetServ
     private final ReponseRecommandationProjetService reponseRecommandationProjetService;
     private final RecommandationProjetMapper recommandationProjetMapper;
     private final TacheService tacheService;
-    private final OllamaClient ollamaClient;
+    private final ModeleIaClient ollamaClient;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
 

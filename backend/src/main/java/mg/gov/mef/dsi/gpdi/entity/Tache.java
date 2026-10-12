@@ -66,6 +66,9 @@ public class Tache {
     /** Horodatage de démarrage du chronomètre de suivi du temps ; absent si la tâche n'est pas en cours de saisie. */
     private LocalDateTime demarreeLe;
 
+    /** Vrai si la tâche a été terminée après la date de fin de son sprint (la clôture reste permise, elle est seulement signalée). */
+    private boolean depasseSprint;
+
     @ManyToOne
     @JoinColumn(name = "id_sprint")
     private Sprint sprint;

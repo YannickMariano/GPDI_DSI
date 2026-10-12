@@ -3,6 +3,7 @@ import { Task } from '@core/models/task.model';
 import { PeopleService } from '@core/services/people.service';
 import { TasksService } from '@core/services/tasks.service';
 import { HorlogeService } from '@core/services/horloge.service';
+import { SprintsService } from '@core/services/sprints.service';
 import { PriorityBadge } from '@shared/components/priority-badge/priority-badge';
 import { AvatarGroup } from '@shared/components/avatar/avatar-group';
 import { formatDateFr, formatHms } from '@shared/utils/format.util';
@@ -42,6 +43,7 @@ export class TaskCard {
   private readonly peopleService = inject(PeopleService);
   private readonly tasksService = inject(TasksService);
   private readonly horlogeService = inject(HorlogeService);
+  private readonly sprintsService = inject(SprintsService);
 
   protected readonly assignes = computed(() =>
     this.task()
@@ -59,6 +61,14 @@ export class TaskCard {
       .find((tache): tache is Task => tache !== undefined && tache.statut !== 'terminee' && tache.statut !== 'reportee');
   });
 
+  /** Tâche pas encore terminée alors que son sprint a dépassé sa date de fin (une tâche terminée en retard est marquée par depasseSprint). */
+  protected readonly enRetardSurSprint = computed(() => {
+    const t = this.task();
+    if (t.statut === 'terminee' || t.statut === 'reportee' || !t.sprintId) return false;
+    const sprint = this.sprintsService.byId(t.sprintId)();
+    return sprint !== undefined && sprint.dateFin < dateDuJour(this.horlogeService.maintenant());
+  });
+
   protected readonly formatDateFr = formatDateFr;
   protected readonly formatHms = formatHms;
 
@@ -69,4 +79,10 @@ export class TaskCard {
     const sousTaches = this.task().sousTaches;
     return `${sousTaches.filter((s) => s.fait).length} / ${sousTaches.length}`;
   }
+}
+
+/** Date (heure locale) au format AAAA-MM-JJ, comparable aux dates des sprints. */
+function dateDuJour(horodatage: number): string {
+  const date = new Date(horodatage);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }

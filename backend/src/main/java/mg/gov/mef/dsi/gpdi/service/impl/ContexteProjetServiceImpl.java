@@ -31,6 +31,7 @@ import mg.gov.mef.dsi.gpdi.repository.RisqueRepository;
 import mg.gov.mef.dsi.gpdi.repository.SprintRepository;
 import mg.gov.mef.dsi.gpdi.repository.TacheRepository;
 import mg.gov.mef.dsi.gpdi.service.ContexteProjetService;
+import mg.gov.mef.dsi.gpdi.util.ProgressionProjet;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -99,7 +100,7 @@ public class ContexteProjetServiceImpl implements ContexteProjetService {
 
         ObjectNode racine = objectMapper.createObjectNode();
         racine.put("dateDuJour", aujourdhui.toString());
-        racine.set("projet", decrireProjet(projet, aujourdhui));
+        racine.set("projet", decrireProjet(projet, taches, aujourdhui));
         racine.set("equipe", decrireEquipe(membres, taches, assignesParTache));
         racine.set("taches", decrireTaches(taches, assignesParTache, aujourdhui));
         racine.set("sprints", decrireSprints(idProjet, taches));
@@ -117,7 +118,7 @@ public class ContexteProjetServiceImpl implements ContexteProjetService {
         return new ContexteProjetIa(racine, new HashSet<>(membres.keySet()), idsRisquesReevaluables, libellesRisquesConnus);
     }
 
-    private ObjectNode decrireProjet(Projet projet, LocalDate aujourdhui) {
+    private ObjectNode decrireProjet(Projet projet, List<Tache> taches, LocalDate aujourdhui) {
         ObjectNode noeud = objectMapper.createObjectNode();
         noeud.put("id", projet.getId());
         noeud.put("titre", projet.getTitre());
@@ -132,7 +133,9 @@ public class ContexteProjetServiceImpl implements ContexteProjetService {
             noeud.put("dateFin", projet.getDateFin().toString());
             noeud.put("joursAvantEcheance", ChronoUnit.DAYS.between(aujourdhui, projet.getDateFin()));
         }
-        noeud.put("progressionPourcent", projet.getProgression() == null ? 0 : projet.getProgression());
+        // Meme regle que l'API projets (ProgressionProjet) : la colonne projets.progression n'est pas tenue a jour.
+        long terminees = taches.stream().filter(tache -> tache.getStatut() == StatutTache.TERMINEE).count();
+        noeud.put("progressionPourcent", ProgressionProjet.calculer(terminees, taches.size()));
         return noeud;
     }
 

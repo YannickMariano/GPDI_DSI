@@ -3,7 +3,7 @@ package mg.gov.mef.dsi.gpdi.service.impl;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import mg.gov.mef.dsi.gpdi.client.OllamaClient;
+import mg.gov.mef.dsi.gpdi.client.ModeleIaClient;
 import mg.gov.mef.dsi.gpdi.dto.response.ContexteProjetIa;
 import mg.gov.mef.dsi.gpdi.dto.response.MessageAssistantResponse;
 import mg.gov.mef.dsi.gpdi.entity.IaAnalyse;
@@ -46,7 +46,7 @@ public class AssistantIaServiceImpl implements AssistantIaService {
     private final IaAnalyseRepository iaAnalyseRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final ContexteProjetService contexteProjetService;
-    private final OllamaClient ollamaClient;
+    private final ModeleIaClient ollamaClient;
     private final UtilisateurCourantService utilisateurCourantService;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;

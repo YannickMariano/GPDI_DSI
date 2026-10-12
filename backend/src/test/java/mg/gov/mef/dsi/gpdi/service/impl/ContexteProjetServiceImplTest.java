@@ -132,7 +132,8 @@ class ContexteProjetServiceImplTest {
         assertThat(racine.get("dateDuJour").asText()).isEqualTo(LocalDate.now().toString());
         assertThat(racine.get("projet").get("titre").asText()).isEqualTo("Refonte du SI budgétaire");
         assertThat(racine.get("projet").get("joursAvantEcheance").asLong()).isEqualTo(30L);
-        assertThat(racine.get("projet").get("progressionPourcent").asInt()).isEqualTo(40);
+        // Projet sans tache : progression calculee a 0, la colonne stockee n'est pas lue.
+        assertThat(racine.get("projet").get("progressionPourcent").asInt()).isZero();
 
         JsonNode equipe = racine.get("equipe");
         assertThat(equipe).hasSize(3);
@@ -266,6 +267,20 @@ class ContexteProjetServiceImplTest {
         assertThat(sprints.get(0).get("capaciteHeures").asInt()).isEqualTo(80);
         assertThat(sprints.get(0).get("heuresRestantes").asDouble()).isEqualTo(6.0);
         assertThat(sprints.get(0).get("burndown")).isEmpty();
+    }
+
+    @Test
+    void construire_progressionCalculeeAPartirDesTachesTerminees() {
+        when(tacheRepository.findByProjetId(anyLong(), any(Pageable.class))).thenReturn(new PageImpl<Tache>(Arrays.asList(
+                tache(1L, "T-1", StatutTache.TERMINEE, null, 1.0, 1.0),
+                tache(2L, "T-2", StatutTache.TERMINEE, null, 1.0, 1.0),
+                tache(3L, "T-3", StatutTache.A_FAIRE, null, 1.0, 0.0),
+                tache(4L, "T-4", StatutTache.EN_COURS, null, 1.0, 0.0),
+                tache(5L, "T-5", StatutTache.EN_TEST, null, 1.0, 0.0))));
+
+        JsonNode projetIa = service.construire(ID_PROJET).getContenu().get("projet");
+
+        assertThat(projetIa.get("progressionPourcent").asInt()).isEqualTo(40);
     }
 
     private Utilisateur utilisateur(Long id, String nom, String prenom) {

@@ -34,7 +34,7 @@
             <span class="team__charge-value">{{ member.chargePct }} %</span>
           </div>
           <app-progress-bar [value]="member.chargePct" [color]="etatCharge(member.chargePct).text" />
-          <span class="team__hours">{{ member.heuresAffectees }} h affectées</span>
+          <span class="team__hours">{{ formatHours(member.heuresAffectees) }} affectées</span>
 
           <div class="team__stats">
             <span>{{ member.tachesEnCours }} en cours</span>

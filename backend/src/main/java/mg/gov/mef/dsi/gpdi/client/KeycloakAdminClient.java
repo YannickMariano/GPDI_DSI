@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Client d'administration Keycloak (creation/suppression de comptes), via un client technique
@@ -52,6 +53,12 @@ public class KeycloakAdminClient {
     @Value("${dsi.gpdi.keycloak.admin-client-secret}")
     private String adminClientSecret;
 
+    /** Client applicatif portant les roles GESTIONNAIRE_* lus par KeycloakRoleConverter. */
+    @Value("${dsi.gpdi.security.keycloak-client-id}")
+    private String applicationClientId;
+
+    private static final String PREFIXE_ROLES_GESTIONNAIRE = "GESTIONNAIRE_";
+
     public boolean estConfigure() {
         return StringUtils.hasText(adminClientId) && StringUtils.hasText(adminClientSecret);
     }
@@ -60,6 +67,12 @@ public class KeycloakAdminClient {
      * Cree le compte Keycloak d'un utilisateur GPDI. Le nom d'utilisateur Keycloak est toujours
      * le matricule (cf. UtilisateurCourantService, qui resout l'utilisateur courant par
      * preferred_username = matricule).
+     * <p>
+     * Tous les roles GESTIONNAIRE_* du client applicatif sont attribues au compte cree (choix
+     * provisoire : le controle fin reste porte par la matrice d'habilitations GPDI). Si cette
+     * attribution echoue, le compte Keycloak tout juste cree est supprime pour ne pas laisser de
+     * compte orphelin, puis l'exception remonte (la transaction GPDI est alors annulee).
+     * Necessite les roles realm-management "manage-users" et "view-clients" sur le client technique.
      */
     public void creerUtilisateur(String matricule, String motDePasseClair, String email, String prenom, String nom) {
         if (!estConfigure()) {
@@ -91,6 +104,53 @@ public class KeycloakAdminClient {
             throw new KeycloakIndisponibleException(
                     "Le compte GPDI n'a pas pu être créé : le service d'authentification Keycloak a refusé ou n'a pas pu traiter la demande.", e);
         }
+
+        attribuerRolesGestionnaire(matricule);
+    }
+
+    private void attribuerRolesGestionnaire(String matricule) {
+        try {
+            String jeton = obtenirJetonAdmin();
+            String idKeycloak = rechercherIdParMatricule(matricule, jeton);
+            String idClient = rechercherIdClient(applicationClientId, jeton);
+            if (idKeycloak == null || idClient == null) {
+                throw new KeycloakIndisponibleException("Compte Keycloak ou client " + applicationClientId + " introuvable.");
+            }
+
+            ResponseEntity<List<Map<String, Object>>> reponse = restTemplate.exchange(
+                    baseUrl + "/admin/realms/" + realm + "/clients/" + idClient + "/roles",
+                    HttpMethod.GET, new HttpEntity<>(enteteAvecJeton(jeton)),
+                    new ParameterizedTypeReference<List<Map<String, Object>>>() { });
+            List<Map<String, Object>> rolesClient = reponse.getBody() == null ? Collections.emptyList() : reponse.getBody();
+            List<Map<String, Object>> rolesGestionnaire = rolesClient.stream()
+                    .filter(role -> String.valueOf(role.get("name")).startsWith(PREFIXE_ROLES_GESTIONNAIRE))
+                    .collect(Collectors.toList());
+            if (rolesGestionnaire.isEmpty()) {
+                log.warn("Aucun role {}* trouve sur le client {} : aucun role attribue au matricule {}.",
+                        PREFIXE_ROLES_GESTIONNAIRE, applicationClientId, matricule);
+                return;
+            }
+
+            restTemplate.postForEntity(
+                    baseUrl + "/admin/realms/" + realm + "/users/" + idKeycloak + "/role-mappings/clients/" + idClient,
+                    new HttpEntity<>(rolesGestionnaire, enteteAvecJeton(jeton)), Void.class);
+            log.info("{} role(s) GESTIONNAIRE attribue(s) au compte Keycloak du matricule {}", rolesGestionnaire.size(), matricule);
+        } catch (RestClientException | KeycloakIndisponibleException e) {
+            supprimerUtilisateur(matricule);
+            throw new KeycloakIndisponibleException(
+                    "Le compte GPDI n'a pas pu être créé : les rôles n'ont pas pu être attribués dans Keycloak "
+                            + "(vérifier les droits manage-users et view-clients du client technique).", e);
+        }
+    }
+
+    private String rechercherIdClient(String clientId, String jeton) {
+        ResponseEntity<List<Map<String, Object>>> reponse = restTemplate.exchange(
+                baseUrl + "/admin/realms/" + realm + "/clients?clientId=" + clientId,
+                HttpMethod.GET, new HttpEntity<>(enteteAvecJeton(jeton)),
+                new ParameterizedTypeReference<List<Map<String, Object>>>() { });
+        List<Map<String, Object>> resultats = reponse.getBody();
+        if (resultats == null || resultats.isEmpty()) return null;
+        return String.valueOf(resultats.get(0).get("id"));
     }
 
     /** Suppression best-effort : ne bloque jamais la suppression cote GPDI, journalise seulement en cas d'echec. */

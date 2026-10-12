@@ -13,7 +13,6 @@ import mg.gov.mef.dsi.gpdi.entity.Tache;
 import mg.gov.mef.dsi.gpdi.entity.TachePrecedence;
 import mg.gov.mef.dsi.gpdi.entity.TypeLien;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
-import mg.gov.mef.dsi.gpdi.exception.DateFinTacheInvalideException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.SprintIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.SprintProjetIncoherentException;
@@ -222,7 +221,7 @@ public class TacheServiceImpl implements TacheService {
         } else if (nouveauStatut == StatutTache.TERMINEE) {
             verifierConditionCloture(tache);
             LocalDate dateFinReelle = LocalDate.now();
-            verifierDateFinDansLeSprint(tache, dateFinReelle);
+            marquerDepassementDuSprint(tache, dateFinReelle);
             if (tache.getDemarreeLe() != null) {
                 double heuresEcoulees = Duration.between(tache.getDemarreeLe(), LocalDateTime.now()).toMinutes() / 60.0;
                 double tempsPasseActuel = tache.getTempsPasse() != null ? tache.getTempsPasse() : 0.0;
@@ -234,12 +233,13 @@ public class TacheServiceImpl implements TacheService {
         tache.setStatut(nouveauStatut);
     }
 
-    /** La date de cloture d'une tache ne peut pas depasser la date de cloture du sprint auquel elle appartient (si elle en a un). */
-    private void verifierDateFinDansLeSprint(Tache tache, LocalDate dateFinReelle) {
+    /**
+     * Une tache peut toujours etre terminee, meme apres la date de cloture de son sprint : le depassement
+     * est seulement signale (depasseSprint) au lieu d'etre bloque.
+     */
+    private void marquerDepassementDuSprint(Tache tache, LocalDate dateFinReelle) {
         Sprint sprint = tache.getSprint();
-        if (sprint != null && sprint.getDateFin() != null && dateFinReelle.isAfter(sprint.getDateFin())) {
-            throw new DateFinTacheInvalideException(dateFinReelle, sprint.getDateFin());
-        }
+        tache.setDepasseSprint(sprint != null && sprint.getDateFin() != null && dateFinReelle.isAfter(sprint.getDateFin()));
     }
 
     private void verifierConditionDemarrage(Tache tache) {

@@ -16,4 +16,6 @@ public interface AffectationTacheRepository extends JpaRepository<AffectationTac
     void deleteByUtilisateurId(Long idUtilisateur);
 
     boolean existsByUtilisateurId(Long idUtilisateur);
+
+    boolean existsByTacheProjetIdAndUtilisateurId(Long idProjet, Long idUtilisateur);
 }

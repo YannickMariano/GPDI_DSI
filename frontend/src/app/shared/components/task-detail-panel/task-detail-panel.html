@@ -3,6 +3,9 @@
     <div class="task-detail__header">
       <span class="task-detail__code">{{ t.code }}</span>
       <app-status-badge [statut]="t.statut" />
+      @if (t.depasseSprint) {
+        <span class="task-detail__late">Sprint dépassé</span>
+      }
       <div class="task-detail__spacer"></div>
       <button type="button" class="task-detail__icon-btn" (click)="close.emit()" aria-label="Fermer le panneau">×</button>
     </div>

@@ -7,6 +7,7 @@ import mg.gov.mef.dsi.gpdi.entity.Priorite;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.Role;
 import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
+import mg.gov.mef.dsi.gpdi.entity.StatutTache;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
 import mg.gov.mef.dsi.gpdi.exception.EquipeIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
@@ -16,6 +17,7 @@ import mg.gov.mef.dsi.gpdi.exception.UtilisateurNonEligibleException;
 import mg.gov.mef.dsi.gpdi.mapper.ProjetMapper;
 import mg.gov.mef.dsi.gpdi.repository.EquipeRepository;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
+import mg.gov.mef.dsi.gpdi.repository.TacheRepository;
 import mg.gov.mef.dsi.gpdi.repository.UtilisateurRepository;
 import mg.gov.mef.dsi.gpdi.service.impl.ProjetServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,11 +54,41 @@ class ProjetServiceImplTest {
     @Mock
     private HabilitationService habilitationService;
 
+    @Mock
+    private TacheRepository tacheRepository;
+
     private ProjetServiceImpl service;
 
     @BeforeEach
     void initService() {
-        service = new ProjetServiceImpl(projetRepository, utilisateurRepository, equipeRepository, projetMapper, habilitationService);
+        service = new ProjetServiceImpl(projetRepository, utilisateurRepository, equipeRepository, projetMapper, habilitationService, tacheRepository);
+    }
+
+    @Test
+    void obtenir_calculeLaProgressionAPartirDesTachesTerminees() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+        when(projetMapper.toResponse(projet)).thenReturn(new ProjetResponse());
+        when(tacheRepository.countByProjetId(1L)).thenReturn(3L);
+        when(tacheRepository.countByProjetIdAndStatut(1L, StatutTache.TERMINEE)).thenReturn(1L);
+
+        ProjetResponse reponse = service.obtenir(1L);
+
+        assertThat(reponse.getProgression()).isEqualTo(33);
+    }
+
+    @Test
+    void obtenir_projetSansTache_progressionAZero() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+        when(projetMapper.toResponse(projet)).thenReturn(new ProjetResponse());
+        when(tacheRepository.countByProjetId(1L)).thenReturn(0L);
+
+        ProjetResponse reponse = service.obtenir(1L);
+
+        assertThat(reponse.getProgression()).isZero();
     }
 
     private Utilisateur responsableEligible(Long id) {

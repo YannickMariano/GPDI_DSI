@@ -5,11 +5,26 @@
       <span class="ai-page__count">{{ recommandations().length }}</span>
       @if (projetId()) {
         <button type="button" class="ai-page__analyse-btn" [disabled]="analyseEnCours()" (click)="analyser()">
+          @if (analyseEnCours()) {
+            <span class="ai-spinner" aria-hidden="true"></span>
+          }
           {{ analyseEnCours() ? 'Analyse en cours…' : 'Analyser' }}
         </button>
       }
     </div>
     <p class="ai-page__governance">Aucune recommandation n'est appliquée sans validation humaine.</p>
+
+    @if (analyseEnCours()) {
+      <div class="ai-analysis-loading" role="status" aria-live="polite">
+        <span class="ai-thinking__dots" aria-hidden="true"><span></span><span></span><span></span></span>
+        <span class="ai-thinking__text">
+          <span class="ai-thinking__title">L'IA analyse le projet</span>
+          <span class="ai-thinking__step">{{ etapeAnalyse() }} · {{ secondesAnalyse() }} s</span>
+        </span>
+      </div>
+    } @else if (erreurAnalyse(); as erreur) {
+      <div class="ai-analysis-error" role="alert">{{ erreur }}</div>
+    }
 
     @if (recommandations().length > 0) {
       <div class="ai-page__cards">
@@ -70,8 +85,18 @@
           </div>
         }
         @if (enCours()) {
-          <div class="ai-chat__message">
-            <div class="ai-chat__bubble ai-chat__bubble--pending">L'assistant réfléchit… (jusqu'à quelques minutes)</div>
+          <div class="ai-chat__message" role="status" aria-live="polite">
+            <div class="ai-chat__bubble ai-chat__bubble--pending ai-thinking">
+              <span class="ai-thinking__dots" aria-hidden="true"><span></span><span></span><span></span></span>
+              <span class="ai-thinking__text">
+                <span class="ai-thinking__title">L'assistant réfléchit</span>
+                <span class="ai-thinking__step">{{ etapeChat() }} · {{ secondesChat() }} s</span>
+              </span>
+            </div>
+          </div>
+        } @else if (erreurChat(); as erreur) {
+          <div class="ai-chat__message" role="alert">
+            <div class="ai-chat__bubble ai-chat__bubble--error">{{ erreur }}</div>
           </div>
         }
       </div>

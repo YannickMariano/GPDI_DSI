@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -31,7 +32,8 @@ import java.util.Map;
  * (Keycloak) ; declarer un second bean casserait l'injection par type de ce dernier.
  */
 @Component
-public class OllamaClient {
+@ConditionalOnProperty(name = "dsi.gpdi.ia.fournisseur", havingValue = "ollama", matchIfMissing = true)
+public class OllamaClient implements ModeleIaClient {
 
     private static final Logger log = LoggerFactory.getLogger(OllamaClient.class);
 
@@ -62,6 +64,7 @@ public class OllamaClient {
     }
 
     /** Nom du modele utilise, a tracer avec chaque analyse pour pouvoir comparer les resultats dans le temps. */
+    @Override
     public String getModele() {
         return modele;
     }
@@ -73,6 +76,7 @@ public class OllamaClient {
      *
      * @throws OllamaIndisponibleException si Ollama est injoignable, en erreur ou renvoie une reponse vide
      */
+    @Override
     public String genererJson(String consigneSysteme, String consigneUtilisateur, Map<String, Object> schemaJson) {
         Map<String, Object> options = new HashMap<>();
         options.put("temperature", TEMPERATURE);

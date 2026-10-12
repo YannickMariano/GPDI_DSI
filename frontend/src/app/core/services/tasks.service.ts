@@ -23,6 +23,7 @@ interface TacheResponseDto {
   tempsEstime: number | null;
   tempsPasse: number | null;
   demarreeLe: string | null;
+  depasseSprint: boolean;
   idSprint: number | null;
   idProjet: number;
   assignations: UtilisateurAssigneDto[];
@@ -124,6 +125,7 @@ function versTask(dto: TacheResponseDto, existant?: Task): Task {
     estimeHeures: dto.tempsEstime ?? 0,
     tempsPasseHeures: dto.tempsPasse ?? 0,
     demarreeLe: dto.demarreeLe ?? undefined,
+    depasseSprint: dto.depasseSprint ?? false,
     complexite: existant?.complexite ?? 3,
     iaComplexiteSuggeree: existant?.iaComplexiteSuggeree,
     iaConfiance: existant?.iaConfiance,

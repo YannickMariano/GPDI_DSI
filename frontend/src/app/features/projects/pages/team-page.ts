@@ -11,6 +11,7 @@ import { Avatar } from '@shared/components/avatar/avatar';
 import { ProgressBar } from '@shared/components/progress-bar/progress-bar';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { Modal } from '@shared/components/modal/modal';
+import { formatHours } from '@shared/utils/format.util';
 import { computeWorkload, etatCharge, MemberWorkload } from '../workload.util';
 
 @Component({
@@ -32,6 +33,7 @@ export class TeamPage {
   private readonly toast = inject(ToastService);
 
   protected readonly etatCharge = etatCharge;
+  protected readonly formatHours = formatHours;
   protected readonly peutGererEquipe = computed(() => this.authService.currentUser()?.role === Role.ChefProjet);
 
   protected readonly project = computed(() => this.projectsService.byId(this.projectId())());

@@ -31,77 +31,14 @@
           <span class="reports__report-meta">{{ doc.meta }}</span>
         </div>
         <div class="reports__toolbar-actions">
-          <button type="button" (click)="exporter('PDF')">Exporter PDF</button>
-          <button type="button" (click)="exporter('Excel')">Exporter Excel</button>
-          <button type="button" class="reports__primary" (click)="diffuser()">Diffuser</button>
+          <button type="button" [disabled]="exportEnCours()" (click)="exporterPdf()">{{ exportEnCours() ? 'Export PDF…' : 'Exporter PDF' }}</button>
+          <button type="button" class="reports__primary" [disabled]="diffusionEnCours() || !projetId()" (click)="diffuser()">
+            {{ diffusionEnCours() ? 'Diffusion…' : 'Diffuser' }}
+          </button>
         </div>
       </div>
 
-      <article class="reports__document">
-        <header class="reports__letterhead">
-          <div class="reports__letterhead-text">
-            <span class="reports__ministry">{{ doc.surtitre }}</span>
-            <h1>{{ doc.titre }}</h1>
-            <span class="reports__project-line">{{ doc.periode }}</span>
-          </div>
-          <span class="reports__letterhead-mark" aria-hidden="true">G</span>
-        </header>
-
-        <div class="reports__figures">
-          @for (f of doc.chiffres; track f.libelle) {
-            <div class="reports__figure">
-              <span class="reports__figure-label">{{ f.libelle }}</span>
-              <span class="reports__figure-value">{{ f.valeur }}</span>
-              <span class="reports__figure-delta" [style.color]="tonColor[f.ton]">{{ f.delta }}</span>
-            </div>
-          }
-        </div>
-
-        @for (s of doc.sections; track s.titre) {
-          <section class="reports__section">
-            <h2>{{ s.titre }}</h2>
-
-            @if (s.puces; as puces) {
-              <ul class="reports__facts">
-                @for (puce of puces; track puce.texte) {
-                  <li><span class="reports__fact-dot" [style.background]="tonColor[puce.ton]"></span>{{ puce.texte }}</li>
-                }
-              </ul>
-            }
-
-            @if (s.table; as table) {
-              <div class="reports__table" [style.gridTemplateColumns]="colonnesGrid(table.colonnes)">
-                @for (col of table.colonnes; track col.libelle) {
-                  <div class="reports__table-head" [class.reports__table-cell--right]="col.align === 'right'">{{ col.libelle }}</div>
-                }
-                @for (ligne of table.lignes; track $index) {
-                  @for (cellule of ligne; track $index; let ci = $index) {
-                    <div
-                      class="reports__table-cell"
-                      [class.reports__table-cell--right]="table.colonnes[ci].align === 'right'"
-                      [class.reports__table-cell--accent]="cellule.accent"
-                      [style.color]="cellule.ton ? tonColor[cellule.ton] : null"
-                    >
-                      {{ cellule.texte }}
-                    </div>
-                  }
-                }
-              </div>
-            }
-
-            @if (s.note; as note) {
-              <div class="reports__attention" [class.reports__attention--alerte]="note.alerte">
-                <p>{{ note.texte }}</p>
-              </div>
-            }
-          </section>
-        }
-
-        <footer class="reports__footer">
-          <span>Document généré automatiquement par GPDI · diffusion restreinte</span>
-          <span class="reports__footer-pages">{{ doc.pages }}</span>
-        </footer>
-      </article>
+      <app-report-document [doc]="doc" />
     }
   </section>
 </div>

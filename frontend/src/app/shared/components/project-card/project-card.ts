@@ -22,6 +22,7 @@ export class ProjectCard {
   readonly clickable = input<boolean>(true);
 
   protected readonly sante = computed(() => SANTE_CONFIG[this.project().sante]);
+  /** Heures consommées arrondies à l'heure entière (pas de décimale). */
+  protected readonly heuresConsommees = computed(() => formatHours(Math.round(this.project().heuresConsommees)));
   protected readonly formatDateFr = formatDateFr;
-  protected readonly formatHours = formatHours;
 }
