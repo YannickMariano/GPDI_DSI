@@ -98,3 +98,13 @@
   font-weight: 500;
   color: var(--color-text-secondary);
 }
+
+.project-card__echeance {
+  font-size: 11.5px;
+  color: var(--color-text-tertiary);
+}
+
+.project-card__echeance--retard {
+  color: var(--color-error);
+  font-weight: 600;
+}

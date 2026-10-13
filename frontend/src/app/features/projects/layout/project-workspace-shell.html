@@ -10,6 +10,7 @@
           <span class="workspace__sante-pill" [style.background]="s.bg" [style.color]="s.text">{{ s.label }}</span>
         }
         <span class="workspace__code">{{ p.codeReference }}</span>
+        <span class="workspace__dates">{{ formatDateFr(p.dateDebut) }} → {{ formatDateFr(p.dateFin) }}</span>
       </div>
       <div class="workspace__meta">
         <span>{{ p.direction }}</span>

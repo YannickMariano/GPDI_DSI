@@ -100,6 +100,12 @@ public class GlobalExceptionHandler {
                         .body(new ErreurResponse(exception.getMessage()));
         }
 
+        @ExceptionHandler(DateHorsPeriodeProjetException.class)
+        public ResponseEntity<ErreurResponse> gererDateHorsPeriodeProjet(DateHorsPeriodeProjetException exception) {
+                return ResponseEntity.badRequest()
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
         @ExceptionHandler(StatutSprintInvalideException.class)
         public ResponseEntity<ErreurResponse> gererStatutSprintInvalide(StatutSprintInvalideException exception) {
                 return ResponseEntity.badRequest()

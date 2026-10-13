@@ -139,6 +139,12 @@ export class TimeTrackingPage {
     return Math.min(999, Math.round((passe / estime) * 100));
   }
 
+  /** Affichage borné à 100 % max : au-delà, on ne montre jamais le dépassement exact, seulement « + de 100% ». */
+  avancementLabel(estime: number, passe: number): string {
+    const pct = this.avancementPct(estime, passe);
+    return pct > 100 ? '+ de 100%' : `${pct}%`;
+  }
+
   avancementCouleur(estime: number, passe: number): string {
     const pct = this.avancementPct(estime, passe);
     if (pct > 100) return 'var(--color-error)';

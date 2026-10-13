@@ -3,7 +3,6 @@ import { TitleCasePipe } from '@angular/common';
 import { ProjectsService } from '@core/services/projects.service';
 import { SprintsService } from '@core/services/sprints.service';
 import { MilestonesService } from '@core/services/milestones.service';
-import { AiSuggestionChip } from '@shared/components/ai-suggestion-chip/ai-suggestion-chip';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { formatDateCourteFr } from '@shared/utils/format.util';
 
@@ -21,7 +20,7 @@ interface GanttRow {
 @Component({
   selector: 'app-gantt-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [AiSuggestionChip, EmptyState, TitleCasePipe],
+  imports: [EmptyState, TitleCasePipe],
   templateUrl: './gantt-page.html',
   styleUrl: './gantt-page.css',
 })

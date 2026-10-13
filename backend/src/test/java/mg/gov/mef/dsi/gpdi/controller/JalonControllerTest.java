@@ -6,13 +6,16 @@ import mg.gov.mef.dsi.gpdi.dto.request.JalonRequest;
 import mg.gov.mef.dsi.gpdi.entity.Equipe;
 import mg.gov.mef.dsi.gpdi.entity.Habilitation;
 import mg.gov.mef.dsi.gpdi.entity.NiveauAcces;
+import mg.gov.mef.dsi.gpdi.entity.PartageClient;
 import mg.gov.mef.dsi.gpdi.entity.Priorite;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.Role;
+import mg.gov.mef.dsi.gpdi.entity.StatutPartage;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
 import mg.gov.mef.dsi.gpdi.repository.EquipeRepository;
 import mg.gov.mef.dsi.gpdi.repository.HabilitationRepository;
 import mg.gov.mef.dsi.gpdi.repository.JalonRepository;
+import mg.gov.mef.dsi.gpdi.repository.PartageClientRepository;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
 import mg.gov.mef.dsi.gpdi.repository.RoleRepository;
 import mg.gov.mef.dsi.gpdi.repository.UtilisateurRepository;
@@ -84,12 +87,16 @@ class JalonControllerTest {
     @Autowired
     private HabilitationRepository habilitationRepository;
 
+    @Autowired
+    private PartageClientRepository partageClientRepository;
+
     private Long idProjet;
     private Long idAutreProjet;
     private String matriculeResponsable;
 
     @BeforeEach
     void nettoyerBaseEtPreparerFixtures() {
+        partageClientRepository.deleteAll();
         jalonRepository.deleteAll();
         projetRepository.deleteAll();
         equipeRepository.deleteAll();
@@ -143,6 +150,34 @@ class JalonControllerTest {
         return SecurityMockMvcRequestPostProcessors.jwt()
                 .jwt(jwt -> jwt.claim("preferred_username", matriculeResponsable))
                 .authorities(new SimpleGrantedAuthority(ROLE_GESTIONNAIRE));
+    }
+
+    private SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor connecteEnTantQue(String matricule) {
+        return SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.claim("preferred_username", matricule));
+    }
+
+    /** Compte Direction métier avec un partage actif sur le projet fixture : doit pouvoir lire ses jalons. */
+    private void creerClientAvecPartageActif(String matricule) {
+        Role role = new Role();
+        role.setNom("direction_metier");
+        role.setDescription("Direction métier");
+        Role roleEnregistre = roleRepository.save(role);
+
+        Utilisateur client = new Utilisateur();
+        client.setMatricule(matricule);
+        client.setNom("Nom" + matricule);
+        client.setPrenom("Prenom");
+        client.setEmail(matricule + "@test.mg");
+        client.setMotDePasse("HASH");
+        client.setRole(roleEnregistre);
+        Utilisateur clientEnregistre = utilisateurRepository.save(client);
+
+        PartageClient partage = new PartageClient();
+        partage.setClient(clientEnregistre);
+        partage.setProjet(projetRepository.findById(idProjet).get());
+        partage.setStatut(StatutPartage.ACTIF);
+        partage.setDateEcheance(LocalDate.now().plusMonths(1));
+        partageClientRepository.save(partage);
     }
 
     private JalonRequest nouvelleRequete(String titre) {
@@ -235,5 +270,34 @@ class JalonControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(nouvelleRequete("Jalon 7"))))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rechercher_clientAvecPartageActif_retourneLesJalons() throws Exception {
+        creerJalonEtRecupererId(idProjet, "Jalon 8");
+        creerClientAvecPartageActif("50010");
+
+        mockMvc.perform(get("/api/projets/{idProjet}/jalons", idProjet).with(connecteEnTantQue("50010")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", org.hamcrest.Matchers.hasSize(1)));
+    }
+
+    @Test
+    void rechercher_utilisateurSansPartageNiResponsabilite_retourne403() throws Exception {
+        Role role = new Role();
+        role.setNom("membre_equipe");
+        role.setDescription("Membre équipe");
+        Role roleEnregistre = roleRepository.save(role);
+        Utilisateur sansAcces = new Utilisateur();
+        sansAcces.setMatricule("50011");
+        sansAcces.setNom("Nom50011");
+        sansAcces.setPrenom("Prenom");
+        sansAcces.setEmail("50011@test.mg");
+        sansAcces.setMotDePasse("HASH");
+        sansAcces.setRole(roleEnregistre);
+        utilisateurRepository.save(sansAcces);
+
+        mockMvc.perform(get("/api/projets/{idProjet}/jalons", idProjet).with(connecteEnTantQue("50011")))
+                .andExpect(status().isForbidden());
     }
 }

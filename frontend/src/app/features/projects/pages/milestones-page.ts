@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MilestonesService } from '@core/services/milestones.service';
+import { ProjectsService } from '@core/services/projects.service';
 import { AuthService } from '@core/services/auth.service';
 import { Role } from '@core/models/role.model';
 import { Livrable, Milestone } from '@core/models/milestone.model';
@@ -37,6 +38,7 @@ export class MilestonesPage {
 
   private readonly fb = inject(FormBuilder);
   private readonly milestonesService = inject(MilestonesService);
+  private readonly projectsService = inject(ProjectsService);
   private readonly authService = inject(AuthService);
   private readonly toast = inject(ToastService);
 
@@ -94,6 +96,12 @@ export class MilestonesPage {
     }
     const { nom, date, description } = this.form.getRawValue();
     const enEdition = this.jalonEnEdition();
+
+    const dateFinProjet = this.projectsService.byId(this.projectId())()?.dateFin;
+    if (dateFinProjet && date > dateFinProjet) {
+      this.toast.show({ type: 'error', message: `La date du jalon ne peut pas dépasser le ${formatDateFr(dateFinProjet)}, date de fin du projet.` });
+      return;
+    }
 
     try {
       if (enEdition) {

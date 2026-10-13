@@ -1,29 +1,35 @@
 <div class="info-points">
-  <h1 class="info-points__title">Points d'information</h1>
+  <div class="info-points__header">
+    <h1 class="info-points__title">Points d'information</h1>
+    @if (projetsPartages().length > 1) {
+      <label for="info-points-project-select" class="sr-only">Choisir le projet</label>
+      <select id="info-points-project-select" class="info-points__select" [value]="projetSelectionneId()" (change)="changerProjet($any($event.target).value)">
+        @for (projet of projetsPartages(); track projet.id) {
+          <option [value]="projet.id">{{ projet.nom }}</option>
+        }
+      </select>
+    }
+  </div>
 
-  @if (projetsPoints().length > 0) {
-    <div class="info-points__grid">
-      @for (entry of projetsPoints(); track entry.projet.id) {
-        <section class="info-points__panel">
-          <h2>Points d'information publiés — {{ entry.projet.nom }}</h2>
-          @if (entry.points.length === 0) {
-            <p class="info-points__empty-note">Aucun point d'information publié pour ce projet pour le moment.</p>
-          } @else {
-            <div class="info-points__list">
-              @for (point of entry.points; track point.id) {
-                <div class="info-points__item">
-                  <div class="info-points__item-header">
-                    <span class="info-points__item-title">{{ point.titre }}</span>
-                    <span class="info-points__item-date">{{ formatDateFr(point.date) }}</span>
-                  </div>
-                  <p class="info-points__item-body">{{ point.corps }}</p>
-                </div>
-              }
+  @if (projetPoints(); as entry) {
+    <section class="info-points__panel">
+      <h2>Points d'information publiés — {{ entry.projet.nom }}</h2>
+      @if (entry.points.length === 0) {
+        <p class="info-points__empty-note">Aucun point d'information publié pour ce projet pour le moment.</p>
+      } @else {
+        <div class="info-points__list">
+          @for (point of entry.points; track point.id) {
+            <div class="info-points__item">
+              <div class="info-points__item-header">
+                <span class="info-points__item-title">{{ point.titre }}</span>
+                <span class="info-points__item-date">{{ formatDateFr(point.date) }}</span>
+              </div>
+              <p class="info-points__item-body">{{ point.corps }}</p>
             </div>
           }
-        </section>
+        </div>
       }
-    </div>
+    </section>
   } @else {
     <app-empty-state icon="▦" title="Aucun point d'information pour le moment" description="Les points d'information apparaissent dès que votre chef de projet en publie un." />
   }

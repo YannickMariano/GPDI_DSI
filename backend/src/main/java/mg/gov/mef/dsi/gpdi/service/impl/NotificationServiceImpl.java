@@ -4,8 +4,11 @@ import lombok.RequiredArgsConstructor;
 import mg.gov.mef.dsi.gpdi.dto.response.NotificationResponse;
 import mg.gov.mef.dsi.gpdi.entity.AffectationTache;
 import mg.gov.mef.dsi.gpdi.entity.Jalon;
+import mg.gov.mef.dsi.gpdi.entity.MembreEquipe;
 import mg.gov.mef.dsi.gpdi.entity.Notification;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
+import mg.gov.mef.dsi.gpdi.entity.RapportDiffuse;
+import mg.gov.mef.dsi.gpdi.entity.Sprint;
 import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
 import mg.gov.mef.dsi.gpdi.entity.StatutTache;
 import mg.gov.mef.dsi.gpdi.entity.Tache;
@@ -14,6 +17,7 @@ import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
 import mg.gov.mef.dsi.gpdi.exception.NotificationIntrouvableException;
 import mg.gov.mef.dsi.gpdi.mapper.NotificationMapper;
 import mg.gov.mef.dsi.gpdi.repository.AffectationTacheRepository;
+import mg.gov.mef.dsi.gpdi.repository.MembreEquipeRepository;
 import mg.gov.mef.dsi.gpdi.repository.NotificationRepository;
 import mg.gov.mef.dsi.gpdi.repository.TacheRepository;
 import mg.gov.mef.dsi.gpdi.service.NotificationService;
@@ -49,6 +53,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final TacheRepository tacheRepository;
     private final AffectationTacheRepository affectationTacheRepository;
+    private final MembreEquipeRepository membreEquipeRepository;
     private final NotificationMapper notificationMapper;
 
     @Override
@@ -117,6 +122,100 @@ public class NotificationServiceImpl implements NotificationService {
                     projet.getTitre(), lienTaches(projet), "ECHEANCE:" + tache.getId());
         }
         log.info("Rappels d'echeance evalues pour {} tache(s)", taches.size());
+    }
+
+    @Override
+    @Transactional
+    public void notifierDemarrageSprint(Sprint sprint) {
+        Projet projet = sprint.getProjet();
+        if (projet == null) {
+            return;
+        }
+        notifier(destinatairesEquipeEtResponsable(projet), TypeNotification.SPRINT, "Sprint « " + abreger(sprint.getNom()) + " » démarré",
+                projet.getTitre(), lienBacklog(projet), "SPRINT_DEMARRE:" + sprint.getId());
+    }
+
+    @Override
+    @Transactional
+    public void notifierClotureSprint(Sprint sprint) {
+        Projet projet = sprint.getProjet();
+        if (projet == null) {
+            return;
+        }
+        notifier(destinatairesEquipeEtResponsable(projet), TypeNotification.SPRINT, "Sprint « " + abreger(sprint.getNom()) + " » clôturé",
+                projet.getTitre(), lienBacklog(projet), "SPRINT_CLOTURE:" + sprint.getId());
+    }
+
+    @Override
+    @Transactional
+    public void notifierDiffusionRapport(RapportDiffuse rapport) {
+        Projet projet = rapport.getProjet();
+        if (projet == null) {
+            return;
+        }
+        String titre = rapport.getTitre() != null && !rapport.getTitre().trim().isEmpty() ? rapport.getTitre() : rapport.getNom();
+        notifier(destinatairesEquipeEtResponsable(projet), TypeNotification.RAPPORT,
+                "Nouveau rapport diffusé par " + nomComplet(rapport.getAuteur()) + " : " + abreger(titre),
+                projet.getTitre(), "/diffusions", null);
+    }
+
+    @Override
+    @Transactional
+    public void notifierAffectation(Tache tache, Collection<Utilisateur> nouveauxAssignes) {
+        Projet projet = tache.getProjet();
+        if (projet == null || nouveauxAssignes.isEmpty()) {
+            return;
+        }
+        notifier(nouveauxAssignes, TypeNotification.AFFECTATION, "Vous avez été affecté à " + libelle(tache),
+                projet.getTitre(), lienTaches(projet), null);
+    }
+
+    @Override
+    @Transactional
+    public void notifierDemarrageTache(Tache tache, Utilisateur acteur) {
+        Projet projet = tache.getProjet();
+        if (projet == null) {
+            return;
+        }
+        notifier(destinatairesEquipeEtResponsable(projet), TypeNotification.TACHE,
+                libelle(tache) + " démarrée par " + nomComplet(acteur), projet.getTitre(), lienTaches(projet), null);
+    }
+
+    @Override
+    @Transactional
+    public void notifierClotureTache(Tache tache, Utilisateur acteur) {
+        Projet projet = tache.getProjet();
+        if (projet == null) {
+            return;
+        }
+        notifier(destinatairesEquipeEtResponsable(projet), TypeNotification.TACHE,
+                libelle(tache) + " terminée par " + nomComplet(acteur), projet.getTitre(), lienTaches(projet), null);
+    }
+
+    /** Membres actifs de l'equipe du projet, plus le responsable (pas necessairement membre de l'equipe lui-meme). */
+    private List<Utilisateur> destinatairesEquipeEtResponsable(Projet projet) {
+        List<Utilisateur> destinataires = new ArrayList<>(membresActifsDeLEquipe(projet));
+        destinataires.add(projet.getResponsable());
+        return destinataires;
+    }
+
+    /** Membres actifs de l'equipe du projet (le responsable n'est pas necessairement membre de l'equipe : absent si non ajoute). */
+    private List<Utilisateur> membresActifsDeLEquipe(Projet projet) {
+        if (projet.getEquipe() == null) {
+            return Collections.emptyList();
+        }
+        return membreEquipeRepository.findByEquipeId(projet.getEquipe().getId()).stream()
+                .filter(membre -> Boolean.TRUE.equals(membre.getActif()))
+                .map(MembreEquipe::getUtilisateur)
+                .collect(Collectors.toList());
+    }
+
+    private String nomComplet(Utilisateur utilisateur) {
+        return utilisateur == null ? "un utilisateur" : utilisateur.getPrenom() + " " + utilisateur.getNom();
+    }
+
+    private String lienBacklog(Projet projet) {
+        return "/projets/" + projet.getId() + "/backlog";
     }
 
     private void notifierResponsableDuJalon(Jalon jalon, String titre, String cle) {

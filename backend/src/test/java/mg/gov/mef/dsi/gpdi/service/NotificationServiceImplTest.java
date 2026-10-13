@@ -2,9 +2,13 @@ package mg.gov.mef.dsi.gpdi.service;
 
 import mg.gov.mef.dsi.gpdi.dto.response.NotificationResponse;
 import mg.gov.mef.dsi.gpdi.entity.AffectationTache;
+import mg.gov.mef.dsi.gpdi.entity.Equipe;
 import mg.gov.mef.dsi.gpdi.entity.Jalon;
+import mg.gov.mef.dsi.gpdi.entity.MembreEquipe;
 import mg.gov.mef.dsi.gpdi.entity.Notification;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
+import mg.gov.mef.dsi.gpdi.entity.RapportDiffuse;
+import mg.gov.mef.dsi.gpdi.entity.Sprint;
 import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
 import mg.gov.mef.dsi.gpdi.entity.StatutTache;
 import mg.gov.mef.dsi.gpdi.entity.Tache;
@@ -13,6 +17,7 @@ import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
 import mg.gov.mef.dsi.gpdi.exception.NotificationIntrouvableException;
 import mg.gov.mef.dsi.gpdi.mapper.NotificationMapper;
 import mg.gov.mef.dsi.gpdi.repository.AffectationTacheRepository;
+import mg.gov.mef.dsi.gpdi.repository.MembreEquipeRepository;
 import mg.gov.mef.dsi.gpdi.repository.NotificationRepository;
 import mg.gov.mef.dsi.gpdi.repository.TacheRepository;
 import mg.gov.mef.dsi.gpdi.service.impl.NotificationServiceImpl;
@@ -47,13 +52,16 @@ class NotificationServiceImplTest {
     @Mock
     private AffectationTacheRepository affectationTacheRepository;
     @Mock
+    private MembreEquipeRepository membreEquipeRepository;
+    @Mock
     private NotificationMapper notificationMapper;
 
     private NotificationServiceImpl service;
 
     @BeforeEach
     void initService() {
-        service = new NotificationServiceImpl(notificationRepository, tacheRepository, affectationTacheRepository, notificationMapper);
+        service = new NotificationServiceImpl(notificationRepository, tacheRepository, affectationTacheRepository,
+                membreEquipeRepository, notificationMapper);
     }
 
     private Utilisateur utilisateur(Long id) {
@@ -79,6 +87,28 @@ class NotificationServiceImplTest {
         tache.setProjet(projet);
         tache.setDateFinPrevue(echeance);
         return tache;
+    }
+
+    private Equipe equipe(Long id) {
+        Equipe equipe = new Equipe();
+        equipe.setId(id);
+        return equipe;
+    }
+
+    private MembreEquipe membre(Equipe equipe, Utilisateur utilisateur, boolean actif) {
+        MembreEquipe membre = new MembreEquipe();
+        membre.setEquipe(equipe);
+        membre.setUtilisateur(utilisateur);
+        membre.setActif(actif);
+        return membre;
+    }
+
+    private Sprint sprint(Projet projet) {
+        Sprint sprint = new Sprint();
+        sprint.setId(20L);
+        sprint.setNom("Sprint 3");
+        sprint.setProjet(projet);
+        return sprint;
     }
 
     private List<Notification> notificationsEnregistrees(int nombreAttendu) {
@@ -215,5 +245,131 @@ class NotificationServiceImplTest {
         service.notifierEcheancesProches();
 
         verify(notificationRepository, never()).save(any(Notification.class));
+    }
+
+    @Test
+    void notifierDemarrageSprint_membresActifsDeLEquipe_sontNotifiesAvecCleDeDeduplication() {
+        Equipe equipe = equipe(3L);
+        Projet projet = projet(utilisateur(1L));
+        projet.setEquipe(equipe);
+        Sprint sprint = sprint(projet);
+        when(membreEquipeRepository.findByEquipeId(3L)).thenReturn(Arrays.asList(
+                membre(equipe, utilisateur(2L), true),
+                membre(equipe, utilisateur(4L), false)));
+
+        service.notifierDemarrageSprint(sprint);
+
+        List<Notification> creees = notificationsEnregistrees(2);
+        assertThat(creees).extracting(n -> n.getDestinataire().getId()).containsExactlyInAnyOrder(1L, 2L);
+        Notification creee = creees.get(0);
+        assertThat(creee.getType()).isEqualTo(TypeNotification.SPRINT);
+        assertThat(creee.getTitre()).isEqualTo("Sprint « Sprint 3 » démarré");
+        assertThat(creee.getLien()).isEqualTo("/projets/1/backlog");
+        assertThat(creee.getCle()).isEqualTo("SPRINT_DEMARRE:20");
+    }
+
+    @Test
+    void notifierClotureSprint_membresActifsDeLEquipe_sontNotifies() {
+        Equipe equipe = equipe(3L);
+        Projet projet = projet(utilisateur(1L));
+        projet.setEquipe(equipe);
+        Sprint sprint = sprint(projet);
+        when(membreEquipeRepository.findByEquipeId(3L)).thenReturn(Collections.singletonList(membre(equipe, utilisateur(2L), true)));
+
+        service.notifierClotureSprint(sprint);
+
+        List<Notification> creees = notificationsEnregistrees(2);
+        assertThat(creees).extracting(n -> n.getDestinataire().getId()).containsExactlyInAnyOrder(1L, 2L);
+        Notification creee = creees.get(0);
+        assertThat(creee.getType()).isEqualTo(TypeNotification.SPRINT);
+        assertThat(creee.getTitre()).isEqualTo("Sprint « Sprint 3 » clôturé");
+        assertThat(creee.getCle()).isEqualTo("SPRINT_CLOTURE:20");
+    }
+
+    @Test
+    void notifierDiffusionRapport_membresActifsDeLEquipe_sontNotifies() {
+        Equipe equipe = equipe(3L);
+        Projet projet = projet(utilisateur(1L));
+        projet.setEquipe(equipe);
+        Utilisateur auteur = utilisateur(1L);
+        auteur.setPrenom("Lala");
+        auteur.setNom("Rabe");
+        RapportDiffuse rapport = new RapportDiffuse();
+        rapport.setId(30L);
+        rapport.setProjet(projet);
+        rapport.setAuteur(auteur);
+        rapport.setNom("Rapport hebdo");
+        rapport.setTitre("Semaine 42");
+        when(membreEquipeRepository.findByEquipeId(3L)).thenReturn(Collections.singletonList(membre(equipe, utilisateur(2L), true)));
+
+        service.notifierDiffusionRapport(rapport);
+
+        List<Notification> creees = notificationsEnregistrees(2);
+        assertThat(creees).extracting(n -> n.getDestinataire().getId()).containsExactlyInAnyOrder(1L, 2L);
+        Notification creee = creees.get(0);
+        assertThat(creee.getType()).isEqualTo(TypeNotification.RAPPORT);
+        assertThat(creee.getTitre()).isEqualTo("Nouveau rapport diffusé par Lala Rabe : Semaine 42");
+        assertThat(creee.getLien()).isEqualTo("/diffusions");
+    }
+
+    @Test
+    void notifierAffectation_nouveauxAssignes_sontNotifies() {
+        Tache tache = tache(projet(utilisateur(1L)), null);
+
+        service.notifierAffectation(tache, Collections.singletonList(utilisateur(2L)));
+
+        Notification creee = notificationsEnregistrees(1).get(0);
+        assertThat(creee.getDestinataire().getId()).isEqualTo(2L);
+        assertThat(creee.getType()).isEqualTo(TypeNotification.AFFECTATION);
+        assertThat(creee.getTitre()).isEqualTo("Vous avez été affecté à T-10 — Migrer la base");
+        assertThat(creee.getLien()).isEqualTo("/projets/1/taches");
+    }
+
+    @Test
+    void notifierAffectation_aucunNouvelAssigne_neCreeRien() {
+        Tache tache = tache(projet(utilisateur(1L)), null);
+
+        service.notifierAffectation(tache, Collections.emptyList());
+
+        verify(notificationRepository, never()).save(any(Notification.class));
+    }
+
+    @Test
+    void notifierDemarrageTache_membresActifsDeLEquipeEtResponsable_sontNotifies() {
+        Equipe equipe = equipe(3L);
+        Projet projet = projet(utilisateur(1L));
+        projet.setEquipe(equipe);
+        Tache tache = tache(projet, null);
+        Utilisateur acteur = utilisateur(5L);
+        acteur.setPrenom("Lala");
+        acteur.setNom("Rabe");
+        when(membreEquipeRepository.findByEquipeId(3L)).thenReturn(Collections.singletonList(membre(equipe, utilisateur(2L), true)));
+
+        service.notifierDemarrageTache(tache, acteur);
+
+        List<Notification> creees = notificationsEnregistrees(2);
+        assertThat(creees).extracting(n -> n.getDestinataire().getId()).containsExactlyInAnyOrder(1L, 2L);
+        assertThat(creees.get(0).getType()).isEqualTo(TypeNotification.TACHE);
+        assertThat(creees.get(0).getTitre()).isEqualTo("T-10 — Migrer la base démarrée par Lala Rabe");
+        assertThat(creees.get(0).getLien()).isEqualTo("/projets/1/taches");
+    }
+
+    @Test
+    void notifierClotureTache_membresActifsDeLEquipeEtResponsable_sontNotifies() {
+        Equipe equipe = equipe(3L);
+        Projet projet = projet(utilisateur(1L));
+        projet.setEquipe(equipe);
+        Tache tache = tache(projet, null);
+        Utilisateur acteur = utilisateur(5L);
+        acteur.setPrenom("Lala");
+        acteur.setNom("Rabe");
+        when(membreEquipeRepository.findByEquipeId(3L)).thenReturn(Collections.singletonList(membre(equipe, utilisateur(2L), true)));
+
+        service.notifierClotureTache(tache, acteur);
+
+        List<Notification> creees = notificationsEnregistrees(2);
+        assertThat(creees).extracting(n -> n.getDestinataire().getId()).containsExactlyInAnyOrder(1L, 2L);
+        assertThat(creees.get(0).getType()).isEqualTo(TypeNotification.TACHE);
+        assertThat(creees.get(0).getTitre()).isEqualTo("T-10 — Migrer la base terminée par Lala Rabe");
     }
 }

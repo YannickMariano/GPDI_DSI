@@ -4,5 +4,9 @@ public enum TypeNotification {
     BLOCAGE,
     ECHEANCE,
     JALON,
-    IA
+    IA,
+    SPRINT,
+    RAPPORT,
+    AFFECTATION,
+    TACHE
 }

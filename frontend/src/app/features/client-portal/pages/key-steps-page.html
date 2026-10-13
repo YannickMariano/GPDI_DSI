@@ -1,39 +1,45 @@
 <div class="key-steps">
-  <h1 class="key-steps__title">Étapes clés</h1>
+  <div class="key-steps__header">
+    <h1 class="key-steps__title">Étapes clés</h1>
+    @if (projetsPartages().length > 1) {
+      <label for="key-steps-project-select" class="sr-only">Choisir le projet</label>
+      <select id="key-steps-project-select" class="key-steps__select" [value]="projetSelectionneId()" (change)="changerProjet($any($event.target).value)">
+        @for (projet of projetsPartages(); track projet.id) {
+          <option [value]="projet.id">{{ projet.nom }}</option>
+        }
+      </select>
+    }
+  </div>
 
-  @if (projetsEtapes().length > 0) {
-    <div class="key-steps__grid">
-      @for (entry of projetsEtapes(); track entry.projet.id) {
-        <section class="key-steps__panel">
-          <h2>Étapes clés — {{ entry.projet.nom }}</h2>
-          @if (entry.etapes.length > 0) {
-            <div class="key-steps__timeline">
-              @for (etape of entry.etapes; track etape.id; let last = $last) {
-                <div class="key-steps__step">
-                  <div class="key-steps__step-marker-col">
-                    <span class="key-steps__step-marker" [style.background]="jalonStyle[etape.statut].icone === '✓' ? 'var(--color-success)' : jalonStyle[etape.statut].icone === '◉' ? 'var(--color-action)' : 'var(--color-border-decorative)'">
-                      {{ jalonStyle[etape.statut].icone }}
-                    </span>
-                    @if (!last) {
-                      <span class="key-steps__step-line" aria-hidden="true"></span>
-                    }
-                  </div>
-                  <div class="key-steps__step-body">
-                    <span class="key-steps__step-name">{{ etape.nom }}</span>
-                    <span class="key-steps__step-date">{{ formatDateFr(etape.date) }}</span>
-                    <span class="key-steps__pill" [style.background]="jalonStyle[etape.statut].bg" [style.color]="jalonStyle[etape.statut].text">
-                      {{ jalonStyle[etape.statut].label }}
-                    </span>
-                  </div>
-                </div>
-              }
+  @if (projetEtapes(); as entry) {
+    <section class="key-steps__panel">
+      <h2>Étapes clés — {{ entry.projet.nom }}</h2>
+      @if (entry.etapes.length > 0) {
+        <div class="key-steps__timeline">
+          @for (etape of entry.etapes; track etape.id; let last = $last) {
+            <div class="key-steps__step">
+              <div class="key-steps__step-marker-col">
+                <span class="key-steps__step-marker" [style.background]="jalonStyle[etape.statut].icone === '✓' ? 'var(--color-success)' : jalonStyle[etape.statut].icone === '◉' ? 'var(--color-action)' : 'var(--color-border-decorative)'">
+                  {{ jalonStyle[etape.statut].icone }}
+                </span>
+                @if (!last) {
+                  <span class="key-steps__step-line" aria-hidden="true"></span>
+                }
+              </div>
+              <div class="key-steps__step-body">
+                <span class="key-steps__step-name">{{ etape.nom }}</span>
+                <span class="key-steps__step-date">{{ formatDateFr(etape.date) }}</span>
+                <span class="key-steps__pill" [style.background]="jalonStyle[etape.statut].bg" [style.color]="jalonStyle[etape.statut].text">
+                  {{ jalonStyle[etape.statut].label }}
+                </span>
+              </div>
             </div>
-          } @else {
-            <p class="key-steps__empty-note">Aucune étape clé publiée pour ce projet pour le moment.</p>
           }
-        </section>
+        </div>
+      } @else {
+        <p class="key-steps__empty-note">Aucune étape clé publiée pour ce projet pour le moment.</p>
       }
-    </div>
+    </section>
   } @else {
     <app-empty-state icon="◇" title="Aucune étape clé publiée pour le moment" description="Les étapes clés apparaissent dès que la Direction des Systèmes d'Information les publie." />
   }

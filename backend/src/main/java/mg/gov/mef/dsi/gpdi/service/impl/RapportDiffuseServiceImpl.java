@@ -16,6 +16,7 @@ import mg.gov.mef.dsi.gpdi.repository.MembreEquipeRepository;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
 import mg.gov.mef.dsi.gpdi.repository.RapportDiffuseRepository;
 import mg.gov.mef.dsi.gpdi.security.UtilisateurCourantService;
+import mg.gov.mef.dsi.gpdi.service.NotificationService;
 import mg.gov.mef.dsi.gpdi.service.RapportDiffuseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,6 +47,7 @@ public class RapportDiffuseServiceImpl implements RapportDiffuseService {
     private final AffectationTacheRepository affectationTacheRepository;
     private final RapportDiffuseMapper rapportDiffuseMapper;
     private final UtilisateurCourantService utilisateurCourantService;
+    private final NotificationService notificationService;
     private final ObjectMapper objectMapper;
 
     @Override
@@ -66,8 +68,10 @@ public class RapportDiffuseServiceImpl implements RapportDiffuseService {
         rapport.setTitre(request.getTitre());
         rapport.setContenu(versTexte(request));
 
-        RapportDiffuseResponse reponse = versReponse(rapportDiffuseRepository.save(rapport));
+        RapportDiffuse rapportEnregistre = rapportDiffuseRepository.save(rapport);
+        RapportDiffuseResponse reponse = versReponse(rapportEnregistre);
         log.info("Rapport {} ({}) diffuse sur le projet {} par l'utilisateur {}", reponse.getId(), rapport.getModele(), projet.getId(), auteur.getId());
+        notificationService.notifierDiffusionRapport(rapportEnregistre);
         return reponse;
     }
 

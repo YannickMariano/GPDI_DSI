@@ -1,4 +1,4 @@
-export type TypeAlerte = 'blocage' | 'echeance' | 'jalon' | 'ia';
+export type TypeAlerte = 'blocage' | 'echeance' | 'jalon' | 'ia' | 'sprint' | 'rapport' | 'affectation' | 'tache';
 
 export interface AppNotification {
   id: string;

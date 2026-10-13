@@ -77,9 +77,9 @@
             <app-progress-bar
               [value]="avancementPct(t.estimeHeures, tempsPasseLive(t))"
               [color]="avancementCouleur(t.estimeHeures, tempsPasseLive(t))"
-              [ariaLabel]="avancementPct(t.estimeHeures, tempsPasseLive(t)) + '% du temps estimé pour ' + t.titre"
+              [ariaLabel]="avancementLabel(t.estimeHeures, tempsPasseLive(t)) + ' du temps estimé pour ' + t.titre"
             />
-            <span class="time-tracking__avancement-text">{{ avancementPct(t.estimeHeures, tempsPasseLive(t)) }}% du temps estimé{{ t.demarreeLe ? ' · en cours' : '' }}</span>
+            <span class="time-tracking__avancement-text">{{ avancementLabel(t.estimeHeures, tempsPasseLive(t)) }} du temps estimé{{ t.demarreeLe ? ' · en cours' : '' }}</span>
           </span>
           <span role="cell">
             <button

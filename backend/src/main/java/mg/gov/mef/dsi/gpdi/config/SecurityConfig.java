@@ -42,8 +42,18 @@ public class SecurityConfig {
                 .antMatchers("/api/habilitations/**").hasRole("GESTIONNAIRE_ROLE")
                 .antMatchers("/api/utilisateurs/**").hasRole("GESTIONNAIRE_UTILISATEUR")
                 .antMatchers("/api/equipes/**").hasRole("GESTIONNAIRE_EQUIPE")
+                // Lecture seule ouverte aussi a un compte client avec un partage actif sur ce projet precis
+                // (espace client, avancement partage) ; le perimetre exact est verifie dans le service
+                // (verifierAccesLecturePartageable). Creer/modifier/demarrer/cloturer restent reserves a
+                // GESTIONNAIRE_SPRINT, via le matcher suivant.
+                .antMatchers(HttpMethod.GET, "/api/projets/*/sprints/**").authenticated()
                 .antMatchers("/api/projets/*/sprints/**").hasRole("GESTIONNAIRE_SPRINT")
+                // Meme principe que les sprints ci-dessus : lecture seule ouverte aux comptes clients partages,
+                // perimetre verifie dans JalonServiceImpl (verifierAccesLecturePartageable).
+                .antMatchers(HttpMethod.GET, "/api/projets/*/jalons/**").authenticated()
                 .antMatchers("/api/projets/*/jalons/**").hasRole("GESTIONNAIRE_JALON")
+                // Idem pour les livrables d'un jalon, verifie dans LivrableServiceImpl.
+                .antMatchers(HttpMethod.GET, "/api/jalons/*/livrables/**").authenticated()
                 .antMatchers("/api/jalons/*/livrables/**").hasRole("GESTIONNAIRE_LIVRABLE")
                 .antMatchers("/api/projets/*/risques/**").hasRole("GESTIONNAIRE_RISQUE")
                 .antMatchers("/api/projets/*/taches/**").hasRole("GESTIONNAIRE_TACHE")

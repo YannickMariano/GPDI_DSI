@@ -355,8 +355,11 @@ solution est soit `REASSIGNER_TACHE`, soit `CREER_TACHE`, avec un `gain` (béné
 **`POST /{idRisque}/rejeter`** (body facultatif `{ motif }`) renvoie `{ idRisque, statut: "REJETE", solutions: [] }`.
 
 **Cycle de vie d'un risque** : `OUVERT` -> (appliquer) `SOUS_CONTROLE`, ou (rejeter) `REJETE`. `CLOS` est atteint
-automatiquement quand la réévaluation d'un risque `SOUS_CONTROLE` le ramène au niveau `FAIBLE`. Suggérer, appliquer
-et rejeter ne sont possibles que sur un risque `OUVERT` (409 sinon).
+automatiquement de deux façons : (1) quand la réévaluation d'un risque `SOUS_CONTROLE` le ramène au niveau `FAIBLE`
+(voir Détection ci-dessous), ou (2) dès que toutes les tâches créées ou réassignées par ses solutions appliquées
+passent à `TERMINEE` ou `REPORTEE` (`RisqueServiceImpl.cloreSiTachesTerminees`, déclenché à chaque changement de
+statut de tâche par `TacheServiceImpl.modifier`) — la mitigation est alors considérée terminée indépendamment du
+prochain passage de l'IA. Suggérer, appliquer et rejeter ne sont possibles que sur un risque `OUVERT` (409 sinon).
 
 **Détection** : le contexte envoyé au modèle (projet, équipe, tâches à surveiller, sprints, jalons, risques
 connus) est conservé dans `ia_analyses.contexte`. Il ne contient ni matricule, ni email, ni téléphone, ni commentaire.

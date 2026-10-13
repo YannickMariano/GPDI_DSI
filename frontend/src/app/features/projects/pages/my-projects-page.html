@@ -31,7 +31,7 @@
     <div class="my-projects__grid">
       @for (projet of projetsFiltres(); track projet.id) {
         <div class="my-projects__card-wrap" [class.my-projects__card-wrap--archived]="estArchive(projet)">
-          <app-project-card [project]="projet" [responsable]="responsable(projet.responsableId)" />
+          <app-project-card [project]="projet" [responsable]="responsable(projet.responsableId)" [showJoursRestants]="true" />
           <div class="my-projects__card-footer">
             <div class="my-projects__card-meta">
               <app-priority-badge [priorite]="projet.priorite" />

@@ -10,6 +10,10 @@ const TYPE_CONFIG: Record<TypeAlerte, { label: string; color: string }> = {
   echeance: { label: 'Échéance', color: 'var(--color-alert)' },
   jalon: { label: 'Jalon', color: 'var(--color-ai)' },
   ia: { label: 'IA', color: 'var(--color-action)' },
+  sprint: { label: 'Sprint', color: 'var(--color-success-text)' },
+  rapport: { label: 'Rapport', color: 'var(--color-action)' },
+  affectation: { label: 'Affectation', color: 'var(--color-text-secondary)' },
+  tache: { label: 'Tâche', color: 'var(--color-success-text)' },
 };
 
 @Component({

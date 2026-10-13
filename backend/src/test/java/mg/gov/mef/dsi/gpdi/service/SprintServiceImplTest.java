@@ -53,11 +53,15 @@ class SprintServiceImplTest {
     @Mock
     private HabilitationService habilitationService;
 
+    @Mock
+    private NotificationService notificationService;
+
     private SprintServiceImpl service;
 
     @BeforeEach
     void initService() {
-        service = new SprintServiceImpl(sprintRepository, projetRepository, sprintMapper, accesProjetService, habilitationService);
+        service = new SprintServiceImpl(sprintRepository, projetRepository, sprintMapper, accesProjetService,
+                habilitationService, notificationService);
     }
 
     private SprintRequest requeteValide() {
@@ -144,6 +148,45 @@ class SprintServiceImplTest {
     }
 
     @Test
+    void creer_dateFinDepassantLaFinDuProjet_leveDateHorsPeriodeProjetException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setDateFin(LocalDate.now().plusWeeks(1));
+
+        SprintRequest request = requeteValide();
+        request.setDateDebut(LocalDate.now());
+        request.setDateFin(LocalDate.now().plusWeeks(2));
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+
+        assertThatThrownBy(() -> service.creer(1L, request))
+                .isInstanceOf(mg.gov.mef.dsi.gpdi.exception.DateHorsPeriodeProjetException.class);
+
+        verify(sprintRepository, never()).save(any());
+    }
+
+    @Test
+    void creer_datesDansLePerimetreDuProjet_creeLeSprint() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setDateFin(LocalDate.now().plusMonths(6));
+        SprintRequest request = requeteValide();
+
+        Sprint sprintAEnregistrer = new Sprint();
+        Sprint sprintEnregistre = new Sprint();
+        sprintEnregistre.setId(10L);
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+        when(sprintMapper.toEntity(request)).thenReturn(sprintAEnregistrer);
+        when(sprintRepository.save(sprintAEnregistrer)).thenReturn(sprintEnregistre);
+        when(sprintMapper.toResponse(sprintEnregistre)).thenReturn(new SprintResponse());
+
+        service.creer(1L, request);
+
+        assertThat(sprintAEnregistrer.getProjet()).isEqualTo(projet);
+    }
+
+    @Test
     void creer_projetInexistant_leveProjetIntrouvableException() {
         when(projetRepository.findById(999L)).thenReturn(Optional.empty());
 
@@ -166,7 +209,7 @@ class SprintServiceImplTest {
     }
 
     @Test
-    void rechercher_appelleLeControleDeLectureSurLeProjet() {
+    void rechercher_appelleLeControleDeLecturePartageableSurLeProjet() {
         Projet projet = new Projet();
         projet.setId(1L);
         when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
@@ -175,7 +218,7 @@ class SprintServiceImplTest {
 
         service.rechercher(1L, org.springframework.data.domain.PageRequest.of(0, 10));
 
-        verify(accesProjetService).verifierAccesLecture(projet);
+        verify(accesProjetService).verifierAccesLecturePartageable(projet);
     }
 
     @Test
@@ -262,6 +305,27 @@ class SprintServiceImplTest {
         service.modifier(1L, 10L, request);
 
         verify(sprintMapper).updateEntity(request, sprint);
+    }
+
+    @Test
+    void modifier_dateDebutDepassantLaFinDuProjet_leveDateHorsPeriodeProjetException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setDateFin(LocalDate.now().plusDays(3));
+        Sprint sprint = new Sprint();
+        sprint.setId(10L);
+        sprint.setProjet(projet);
+
+        SprintRequest request = requeteValide();
+        request.setDateDebut(LocalDate.now().plusWeeks(1));
+        request.setDateFin(LocalDate.now().plusWeeks(2));
+
+        when(sprintRepository.findById(10L)).thenReturn(Optional.of(sprint));
+
+        assertThatThrownBy(() -> service.modifier(1L, 10L, request))
+                .isInstanceOf(mg.gov.mef.dsi.gpdi.exception.DateHorsPeriodeProjetException.class);
+
+        verify(sprintRepository, never()).save(any());
     }
 
     @Test

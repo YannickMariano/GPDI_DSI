@@ -10,6 +10,7 @@ import { AuthService } from '@core/services/auth.service';
 import { Role } from '@core/models/role.model';
 import { SANTE_CONFIG } from '@shared/utils/sante-config';
 import { formatSprintLabel, sprintAAfficher } from '@shared/utils/sprint-label.util';
+import { formatDateFr } from '@shared/utils/format.util';
 import { ProgressBar } from '@shared/components/progress-bar/progress-bar';
 import { Tabs, TabItem } from '@shared/components/tabs/tabs';
 
@@ -32,6 +33,8 @@ const WORKSPACE_TABS: TabItem[] = [
 })
 export class ProjectWorkspaceShell {
   readonly projectId = input.required<string>();
+
+  protected readonly formatDateFr = formatDateFr;
 
   private readonly projectsService = inject(ProjectsService);
   private readonly peopleService = inject(PeopleService);

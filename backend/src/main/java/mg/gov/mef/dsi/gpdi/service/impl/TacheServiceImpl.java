@@ -31,8 +31,10 @@ import mg.gov.mef.dsi.gpdi.repository.TachePrecedenceRepository;
 import mg.gov.mef.dsi.gpdi.repository.TacheRepository;
 import mg.gov.mef.dsi.gpdi.repository.UtilisateurRepository;
 import mg.gov.mef.dsi.gpdi.security.AccesProjetService;
+import mg.gov.mef.dsi.gpdi.security.UtilisateurCourantService;
 import mg.gov.mef.dsi.gpdi.service.HabilitationService;
 import mg.gov.mef.dsi.gpdi.service.NotificationService;
+import mg.gov.mef.dsi.gpdi.service.RisqueService;
 import mg.gov.mef.dsi.gpdi.service.TacheService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,6 +74,8 @@ public class TacheServiceImpl implements TacheService {
     private final NotificationService notificationService;
     private final AccesProjetService accesProjetService;
     private final HabilitationService habilitationService;
+    private final RisqueService risqueService;
+    private final UtilisateurCourantService utilisateurCourantService;
 
     @Override
     @Transactional
@@ -172,10 +176,24 @@ public class TacheServiceImpl implements TacheService {
         }
         tache = tacheRepository.save(tache);
 
+        // La tache peut etre celle creee/reassignee par une solution de risque appliquee : si elle vient
+        // d'etre terminee ou reportee, le risque "sous controle" dont elle dependait peut desormais se clore.
+        if (request.getStatut() == StatutTache.TERMINEE || request.getStatut() == StatutTache.REPORTEE) {
+            risqueService.cloreSiTachesTerminees(idProjet, id);
+        }
+
         List<UtilisateurAssigneResponse> assignations = remplacerAssignations(tache, assignes);
 
         if (request.getStatut() == StatutTache.BLOQUEE && ancienStatut != StatutTache.BLOQUEE) {
             notificationService.notifierBlocage(tache, assignes);
+        }
+        if (request.getStatut() != null && request.getStatut() != ancienStatut) {
+            Utilisateur acteur = utilisateurCourantService.obtenirUtilisateurCourant();
+            if (request.getStatut() == StatutTache.EN_COURS) {
+                notificationService.notifierDemarrageTache(tache, acteur);
+            } else if (request.getStatut() == StatutTache.TERMINEE) {
+                notificationService.notifierClotureTache(tache, acteur);
+            }
         }
 
         TacheResponse reponse = tacheMapper.toResponse(tache);
@@ -285,8 +303,12 @@ public class TacheServiceImpl implements TacheService {
     }
 
     private List<UtilisateurAssigneResponse> remplacerAssignations(Tache tache, List<Utilisateur> assignes) {
+        Set<Long> idsAssignesAvant = affectationTacheRepository.findByTacheId(tache.getId()).stream()
+                .map(affectation -> affectation.getUtilisateur().getId())
+                .collect(Collectors.toSet());
+
         affectationTacheRepository.deleteByTacheId(tache.getId());
-        return assignes.stream()
+        List<UtilisateurAssigneResponse> assignations = assignes.stream()
                 .map(utilisateur -> {
                     AffectationTache affectation = new AffectationTache();
                     affectation.setTache(tache);
@@ -294,6 +316,15 @@ public class TacheServiceImpl implements TacheService {
                     return tacheMapper.toAssignationResponse(affectationTacheRepository.save(affectation));
                 })
                 .collect(Collectors.toList());
+
+        // Seuls les utilisateurs nouvellement affectes sont prevenus : une modification de tache qui
+        // reconduit les memes assignes ne doit pas renvoyer de notification a chaque sauvegarde.
+        List<Utilisateur> nouveauxAssignes = assignes.stream()
+                .filter(utilisateur -> !idsAssignesAvant.contains(utilisateur.getId()))
+                .collect(Collectors.toList());
+        notificationService.notifierAffectation(tache, nouveauxAssignes);
+
+        return assignations;
     }
 
     private Projet obtenirProjet(Long idProjet) {

@@ -7,6 +7,7 @@ import mg.gov.mef.dsi.gpdi.entity.Jalon;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.StatutJalon;
 import mg.gov.mef.dsi.gpdi.entity.StatutLivrable;
+import mg.gov.mef.dsi.gpdi.exception.DateHorsPeriodeProjetException;
 import mg.gov.mef.dsi.gpdi.exception.JalonIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.LivrableEnAttenteException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
@@ -56,6 +57,7 @@ public class JalonServiceImpl implements JalonService {
         Projet projet = obtenirProjet(idProjet);
         accesProjetService.verifierMembreDuProjet(projet);
         habilitationService.verifierEcriture(FONCTION_JALONS_LIVRABLES);
+        verifierDateDansLePerimetreDuProjet(projet, request.getDateEcheance());
 
         Jalon jalon = jalonMapper.toEntity(request);
         jalon.setProjet(projet);
@@ -93,6 +95,7 @@ public class JalonServiceImpl implements JalonService {
         if (jalon.getStatut() == StatutJalon.ATTEINT) {
             throw new StatutJalonInvalideException(id, jalon.getStatut(), "modifie");
         }
+        verifierDateDansLePerimetreDuProjet(jalon.getProjet(), request.getDateEcheance());
         jalonMapper.updateEntity(request, jalon);
 
         JalonResponse reponse = jalonMapper.toResponse(jalonRepository.save(jalon));
@@ -166,6 +169,13 @@ public class JalonServiceImpl implements JalonService {
             jalonRepository.save(jalon);
             notificationService.notifierJalonEnRetard(jalon);
             log.info("Jalon {} marque EN_RETARD (echeance depassee)", jalon.getId());
+        }
+    }
+
+    /** Un jalon ne peut pas echoir apres la date de fin de son projet. */
+    private void verifierDateDansLePerimetreDuProjet(Projet projet, LocalDate dateEcheance) {
+        if (projet.getDateFin() != null && dateEcheance.isAfter(projet.getDateFin())) {
+            throw new DateHorsPeriodeProjetException(projet.getDateFin());
         }
     }
 

@@ -91,6 +91,43 @@ class JalonServiceImplTest {
     }
 
     @Test
+    void creer_echeanceDepassantLaFinDuProjet_leveDateHorsPeriodeProjetException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setDateFin(LocalDate.now().plusWeeks(1));
+
+        JalonRequest request = requeteValide();
+        request.setDateEcheance(LocalDate.now().plusWeeks(2));
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+
+        assertThatThrownBy(() -> service.creer(1L, request))
+                .isInstanceOf(mg.gov.mef.dsi.gpdi.exception.DateHorsPeriodeProjetException.class);
+
+        verify(jalonRepository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void creer_echeanceDansLePerimetreDuProjet_creeLeJalon() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setDateFin(LocalDate.now().plusMonths(6));
+        JalonRequest request = requeteValide();
+        Jalon jalonAEnregistrer = new Jalon();
+        Jalon jalonEnregistre = new Jalon();
+        jalonEnregistre.setId(10L);
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+        when(jalonMapper.toEntity(request)).thenReturn(jalonAEnregistrer);
+        when(jalonRepository.save(jalonAEnregistrer)).thenReturn(jalonEnregistre);
+        when(jalonMapper.toResponse(jalonEnregistre)).thenReturn(new JalonResponse());
+
+        service.creer(1L, request);
+
+        assertThat(jalonAEnregistrer.getProjet()).isEqualTo(projet);
+    }
+
+    @Test
     void creer_projetInexistant_leveProjetIntrouvableException() {
         when(projetRepository.findById(999L)).thenReturn(Optional.empty());
 
@@ -160,6 +197,27 @@ class JalonServiceImplTest {
         assertThat(jalon.getStatut()).isEqualTo(StatutJalon.ATTEINT);
         assertThat(jalon.getDateValidation()).isEqualTo(LocalDate.now());
         verify(notificationService).notifierJalonAtteint(jalon);
+    }
+
+    @Test
+    void modifier_echeanceDepassantLaFinDuProjet_leveDateHorsPeriodeProjetException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setDateFin(LocalDate.now().plusDays(3));
+        Jalon jalon = new Jalon();
+        jalon.setId(10L);
+        jalon.setProjet(projet);
+        jalon.setStatut(StatutJalon.A_VENIR);
+
+        JalonRequest request = requeteValide();
+        request.setDateEcheance(LocalDate.now().plusWeeks(1));
+
+        when(jalonRepository.findById(10L)).thenReturn(Optional.of(jalon));
+
+        assertThatThrownBy(() -> service.modifier(1L, 10L, request))
+                .isInstanceOf(mg.gov.mef.dsi.gpdi.exception.DateHorsPeriodeProjetException.class);
+
+        verify(jalonRepository, org.mockito.Mockito.never()).save(any());
     }
 
     @Test

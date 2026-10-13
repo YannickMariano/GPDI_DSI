@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, output, signal } 
 import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
+import { AuthService } from '@core/services/auth.service';
 import { NotificationsService } from '@core/services/notifications.service';
 import { ProjectsService } from '@core/services/projects.service';
 import { RelativeTimePipe } from '@shared/pipes/relative-time.pipe';
@@ -9,8 +10,18 @@ import { ClickOutside } from '@shared/directives/click-outside';
 import { SearchBar } from '@shared/components/search-bar/search-bar';
 import { ToastService } from '@shared/components/toast/toast.service';
 import { AppNotification, TypeAlerte } from '@core/models/notification.model';
+import { Role } from '@core/models/role.model';
 
-const ALERT_ICON: Record<TypeAlerte, string> = { blocage: '⛔', echeance: '◔', jalon: '◆', ia: '✦' };
+const ALERT_ICON: Record<TypeAlerte, string> = {
+  blocage: '⛔',
+  echeance: '◔',
+  jalon: '◆',
+  ia: '✦',
+  sprint: '▶',
+  rapport: '▦',
+  affectation: '◍',
+  tache: '◫',
+};
 
 @Component({
   selector: 'app-header',
@@ -25,6 +36,10 @@ export class Header {
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly notificationsService = inject(NotificationsService);
+  private readonly authService = inject(AuthService);
+
+  /** Seul le chef de projet a accès à l'assistant IA (route /assistant-ia gardée par roleGuard(Role.ChefProjet)). */
+  protected readonly peutAccederAssistantIa = computed(() => this.authService.currentUser()?.role === Role.ChefProjet);
 
   protected readonly notifications = this.notificationsService.notifications;
   protected readonly unreadCount = this.notificationsService.unreadCount;

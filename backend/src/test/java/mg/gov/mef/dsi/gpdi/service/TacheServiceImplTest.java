@@ -29,6 +29,8 @@ import mg.gov.mef.dsi.gpdi.repository.TachePrecedenceRepository;
 import mg.gov.mef.dsi.gpdi.repository.TacheRepository;
 import mg.gov.mef.dsi.gpdi.repository.UtilisateurRepository;
 import mg.gov.mef.dsi.gpdi.security.AccesProjetService;
+import mg.gov.mef.dsi.gpdi.security.UtilisateurCourantService;
+import mg.gov.mef.dsi.gpdi.service.RisqueService;
 import mg.gov.mef.dsi.gpdi.service.impl.TacheServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -78,6 +80,10 @@ class TacheServiceImplTest {
     private AccesProjetService accesProjetService;
     @Mock
     private HabilitationService habilitationService;
+    @Mock
+    private RisqueService risqueService;
+    @Mock
+    private UtilisateurCourantService utilisateurCourantService;
 
     private TacheServiceImpl service;
 
@@ -85,7 +91,8 @@ class TacheServiceImplTest {
     void initService() {
         service = new TacheServiceImpl(tacheRepository, projetRepository, sprintRepository, utilisateurRepository,
                 membreEquipeRepository, affectationTacheRepository, sousTacheRepository, commentaireRepository,
-                tachePrecedenceRepository, tacheMapper, notificationService, accesProjetService, habilitationService);
+                tachePrecedenceRepository, tacheMapper, notificationService, accesProjetService, habilitationService,
+                risqueService, utilisateurCourantService);
     }
 
     private TacheRequest requeteValide() {

@@ -10,6 +10,8 @@ public interface IaRecommandationRepository extends JpaRepository<IaRecommandati
 
     List<IaRecommandation> findByRisqueIdOrderByIdAsc(Long idRisque);
 
+    List<IaRecommandation> findByRisqueIdAndStatut(Long idRisque, StatutRecommandation statut);
+
     /** La liste ne doit pas etre vide (un IN () vide n'est pas valide en SQL) : l'appelant doit le verifier. */
     List<IaRecommandation> findByRisqueIdInAndStatutOrderByIdAsc(List<Long> idsRisques, StatutRecommandation statut);
 

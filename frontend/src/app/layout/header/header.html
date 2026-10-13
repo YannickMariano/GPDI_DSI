@@ -18,7 +18,9 @@
     <app-search-bar placeholder="Rechercher un projet, un sprint, une tâche…" shortcut="⌘K" [(value)]="searchTerm" />
   </form>
 
-  <a routerLink="/assistant-ia" class="topbar__icon-button" aria-label="Assistant IA">✦</a>
+  @if (peutAccederAssistantIa()) {
+    <a routerLink="/assistant-ia" class="topbar__icon-button" aria-label="Assistant IA">✦</a>
+  }
 
   <div class="topbar__notifications" appClickOutside (appClickOutside)="notificationsOpen.set(false)">
     <button

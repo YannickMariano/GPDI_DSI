@@ -56,11 +56,13 @@ export class ProjectOverviewPage {
 
   protected readonly tasks = computed(() => this.tasksService.byProject(this.projectId())());
   protected readonly tachesOuvertes = computed(() => this.tasks().filter((t) => t.statut !== 'terminee').length);
-  protected readonly chargeConsommee = computed(() => {
+  /** Affichage borné à 100 % max : au-delà, on ne montre jamais le dépassement exact, seulement « + de 100 ». */
+  protected readonly chargeConsommee = computed<number | string>(() => {
     const enCours = this.tasks().filter((t) => t.sprintId);
     const estime = enCours.reduce((s, t) => s + t.estimeHeures, 0);
     const passe = enCours.reduce((s, t) => s + t.tempsPasseHeures, 0);
-    return estime > 0 ? Math.round((passe / estime) * 100) : 0;
+    const pct = estime > 0 ? Math.round((passe / estime) * 100) : 0;
+    return pct > 100 ? '+ de 100' : pct;
   });
 
   protected readonly milestones = computed(() => this.milestonesService.byProject(this.projectId())());

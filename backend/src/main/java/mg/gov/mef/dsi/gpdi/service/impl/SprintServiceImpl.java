@@ -6,6 +6,7 @@ import mg.gov.mef.dsi.gpdi.dto.response.SprintResponse;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.Sprint;
 import mg.gov.mef.dsi.gpdi.entity.StatutSprint;
+import mg.gov.mef.dsi.gpdi.exception.DateHorsPeriodeProjetException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.SprintChevauchementException;
 import mg.gov.mef.dsi.gpdi.exception.SprintIntrouvableException;
@@ -16,6 +17,7 @@ import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
 import mg.gov.mef.dsi.gpdi.repository.SprintRepository;
 import mg.gov.mef.dsi.gpdi.security.AccesProjetService;
 import mg.gov.mef.dsi.gpdi.service.HabilitationService;
+import mg.gov.mef.dsi.gpdi.service.NotificationService;
 import mg.gov.mef.dsi.gpdi.service.SprintService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,6 +44,7 @@ public class SprintServiceImpl implements SprintService {
     private final SprintMapper sprintMapper;
     private final AccesProjetService accesProjetService;
     private final HabilitationService habilitationService;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -49,6 +52,7 @@ public class SprintServiceImpl implements SprintService {
         Projet projet = obtenirProjet(idProjet);
         accesProjetService.verifierMembreDuProjet(projet);
         habilitationService.verifierEcriture(FONCTION_GESTION_SPRINTS);
+        verifierDatesDansLePerimetreDuProjet(projet, request.getDateDebut(), request.getDateFin());
         verifierAbsenceChevauchement(idProjet, request.getDateDebut(), request.getDateFin(), null);
 
         Sprint sprint = sprintMapper.toEntity(request);
@@ -63,7 +67,7 @@ public class SprintServiceImpl implements SprintService {
     @Transactional(readOnly = true)
     public Page<SprintResponse> rechercher(Long idProjet, Pageable pageable) {
         Projet projet = obtenirProjet(idProjet);
-        accesProjetService.verifierAccesLecture(projet);
+        accesProjetService.verifierAccesLecturePartageable(projet);
         return sprintRepository.findByProjetId(idProjet, pageable).map(sprintMapper::toResponse);
     }
 
@@ -71,7 +75,7 @@ public class SprintServiceImpl implements SprintService {
     @Transactional(readOnly = true)
     public SprintResponse obtenir(Long idProjet, Long id) {
         Sprint sprint = obtenirSprintDuProjet(idProjet, id);
-        accesProjetService.verifierAccesLecture(sprint.getProjet());
+        accesProjetService.verifierAccesLecturePartageable(sprint.getProjet());
         return sprintMapper.toResponse(sprint);
     }
 
@@ -81,6 +85,7 @@ public class SprintServiceImpl implements SprintService {
         Sprint sprint = obtenirSprintDuProjet(idProjet, id);
         accesProjetService.verifierMembreDuProjet(sprint.getProjet());
         habilitationService.verifierEcriture(FONCTION_GESTION_SPRINTS);
+        verifierDatesDansLePerimetreDuProjet(sprint.getProjet(), request.getDateDebut(), request.getDateFin());
         verifierAbsenceChevauchement(idProjet, request.getDateDebut(), request.getDateFin(), id);
         sprintMapper.updateEntity(request, sprint);
 
@@ -117,6 +122,7 @@ public class SprintServiceImpl implements SprintService {
 
         SprintResponse reponse = sprintMapper.toResponse(sprintRepository.save(sprint));
         log.info("Sprint {} demarre", id);
+        notificationService.notifierDemarrageSprint(sprint);
         return reponse;
     }
 
@@ -135,6 +141,7 @@ public class SprintServiceImpl implements SprintService {
 
         SprintResponse reponse = sprintMapper.toResponse(sprintRepository.save(sprint));
         log.info("Sprint {} cloture", id);
+        notificationService.notifierClotureSprint(sprint);
         // Le sprint suivant dont la date de debut est deja arrivee attendait cette cloture : il demarre aussitot.
         demarrerLeSprintSuivantSiDateArrivee(sprint);
         return reponse;
@@ -178,6 +185,7 @@ public class SprintServiceImpl implements SprintService {
         sprint.setStatut(StatutSprint.EN_COURS);
         sprintRepository.save(sprint);
         log.info("Sprint {} demarre automatiquement (date de debut atteinte)", sprint.getId());
+        notificationService.notifierDemarrageSprint(sprint);
     }
 
     /** Sprint du meme projet qui precede immediatement celui-ci (date de debut la plus proche avant la sienne), ou null. */
@@ -189,6 +197,16 @@ public class SprintServiceImpl implements SprintService {
                 .filter(s -> s.getDateDebut() != null && s.getDateDebut().isBefore(sprint.getDateDebut()))
                 .max(Comparator.comparing(Sprint::getDateDebut))
                 .orElse(null);
+    }
+
+    /** Un sprint ne peut ni commencer ni finir apres la date de fin de son projet. */
+    private void verifierDatesDansLePerimetreDuProjet(Projet projet, LocalDate dateDebut, LocalDate dateFin) {
+        if (projet.getDateFin() == null) {
+            return;
+        }
+        if (dateDebut.isAfter(projet.getDateFin()) || dateFin.isAfter(projet.getDateFin())) {
+            throw new DateHorsPeriodeProjetException(projet.getDateFin());
+        }
     }
 
     private void verifierAbsenceChevauchement(Long idProjet, LocalDate dateDebut, LocalDate dateFin, Long idSprintExclu) {

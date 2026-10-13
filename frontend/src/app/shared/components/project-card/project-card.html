@@ -30,6 +30,10 @@
       <span class="project-card__responsable">{{ r.nom }}</span>
     }
   </div>
+
+  @if (showJoursRestants() && joursRestantsLabel(); as label) {
+    <div class="project-card__echeance" [class.project-card__echeance--retard]="enRetard()">{{ label }}</div>
+  }
 </ng-template>
 
 @if (clickable()) {

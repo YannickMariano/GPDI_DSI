@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { TasksService } from '@core/services/tasks.service';
 import { SprintsService } from '@core/services/sprints.service';
+import { ProjectsService } from '@core/services/projects.service';
 import { AuthService } from '@core/services/auth.service';
 import { Role } from '@core/models/role.model';
 import { Sprint } from '@core/models/sprint.model';
@@ -30,6 +31,7 @@ export class BacklogPage {
   private readonly fb = inject(FormBuilder);
   private readonly tasksService = inject(TasksService);
   private readonly sprintsService = inject(SprintsService);
+  private readonly projectsService = inject(ProjectsService);
   private readonly authService = inject(AuthService);
   private readonly toast = inject(ToastService);
 
@@ -182,6 +184,11 @@ export class BacklogPage {
     const { nom, dateDebut, dateFin, objectif, capaciteHeures } = this.form.getRawValue();
     if (dateFin < dateDebut) {
       this.toast.show({ type: 'error', message: 'La date de fin doit être postérieure à la date de début.' });
+      return;
+    }
+    const dateFinProjet = this.projectsService.byId(this.projectId())()?.dateFin;
+    if (dateFinProjet && (dateDebut > dateFinProjet || dateFin > dateFinProjet)) {
+      this.toast.show({ type: 'error', message: `La date de début ou de fin du sprint ne peut pas dépasser le ${formatDateFr(dateFinProjet)}, date de fin du projet.` });
       return;
     }
 

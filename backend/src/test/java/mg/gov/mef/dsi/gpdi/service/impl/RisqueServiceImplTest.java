@@ -7,6 +7,8 @@ import mg.gov.mef.dsi.gpdi.entity.NiveauRisque;
 import mg.gov.mef.dsi.gpdi.entity.Risque;
 import mg.gov.mef.dsi.gpdi.entity.StatutRecommandation;
 import mg.gov.mef.dsi.gpdi.entity.StatutRisque;
+import mg.gov.mef.dsi.gpdi.entity.StatutTache;
+import mg.gov.mef.dsi.gpdi.entity.Tache;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.mapper.IaRecommandationMapper;
@@ -14,6 +16,7 @@ import mg.gov.mef.dsi.gpdi.mapper.RisqueMapper;
 import mg.gov.mef.dsi.gpdi.repository.IaRecommandationRepository;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
 import mg.gov.mef.dsi.gpdi.repository.RisqueRepository;
+import mg.gov.mef.dsi.gpdi.repository.TacheRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,13 +47,15 @@ class RisqueServiceImplTest {
     private RisqueRepository risqueRepository;
     @Mock
     private IaRecommandationRepository iaRecommandationRepository;
+    @Mock
+    private TacheRepository tacheRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private RisqueServiceImpl service;
 
     @BeforeEach
     void setUp() {
-        service = new RisqueServiceImpl(projetRepository, risqueRepository, iaRecommandationRepository,
+        service = new RisqueServiceImpl(projetRepository, risqueRepository, iaRecommandationRepository, tacheRepository,
                 Mappers.getMapper(RisqueMapper.class), Mappers.getMapper(IaRecommandationMapper.class));
     }
 
@@ -117,6 +122,78 @@ class RisqueServiceImplTest {
         assertThat(r2.getIdPorteur()).isNull();
         assertThat(r2.getPorteur()).isNull();
         assertThat(r2.getSolutions()).isEmpty();
+    }
+
+    @Test
+    void cloreSiTachesTerminees_uniqueSolutionAppliqueeDontLaTacheEstTerminee_closLeRisque() {
+        Risque risque = risque(25L, "Surcharge", StatutRisque.SOUS_CONTROLE, null);
+        when(risqueRepository.findByProjetIdAndStatut(ID_PROJET, StatutRisque.SOUS_CONTROLE)).thenReturn(Arrays.asList(risque));
+        when(iaRecommandationRepository.findByRisqueIdAndStatut(25L, StatutRecommandation.APPLIQUEE))
+                .thenReturn(Arrays.asList(solutionAppliquee(1L, risque, 100L)));
+        when(tacheRepository.findById(100L)).thenReturn(java.util.Optional.of(tache(100L, StatutTache.TERMINEE)));
+
+        service.cloreSiTachesTerminees(ID_PROJET, 100L);
+
+        assertThat(risque.getStatut()).isEqualTo(StatutRisque.CLOS);
+        verify(risqueRepository).save(risque);
+    }
+
+    @Test
+    void cloreSiTachesTerminees_uneDesTachesEncorePasFinie_neClotPasLeRisque() {
+        Risque risque = risque(25L, "Surcharge", StatutRisque.SOUS_CONTROLE, null);
+        when(risqueRepository.findByProjetIdAndStatut(ID_PROJET, StatutRisque.SOUS_CONTROLE)).thenReturn(Arrays.asList(risque));
+        when(iaRecommandationRepository.findByRisqueIdAndStatut(25L, StatutRecommandation.APPLIQUEE))
+                .thenReturn(Arrays.asList(solutionAppliquee(1L, risque, 100L), solutionAppliquee(2L, risque, 101L)));
+        when(tacheRepository.findById(100L)).thenReturn(java.util.Optional.of(tache(100L, StatutTache.TERMINEE)));
+        when(tacheRepository.findById(101L)).thenReturn(java.util.Optional.of(tache(101L, StatutTache.EN_COURS)));
+
+        service.cloreSiTachesTerminees(ID_PROJET, 100L);
+
+        assertThat(risque.getStatut()).isEqualTo(StatutRisque.SOUS_CONTROLE);
+        verify(risqueRepository, never()).save(risque);
+    }
+
+    @Test
+    void cloreSiTachesTerminees_tacheReporteeComptePourFinie_closLeRisqueSiToutesLesAutresLeSontAussi() {
+        Risque risque = risque(25L, "Surcharge", StatutRisque.SOUS_CONTROLE, null);
+        when(risqueRepository.findByProjetIdAndStatut(ID_PROJET, StatutRisque.SOUS_CONTROLE)).thenReturn(Arrays.asList(risque));
+        when(iaRecommandationRepository.findByRisqueIdAndStatut(25L, StatutRecommandation.APPLIQUEE))
+                .thenReturn(Arrays.asList(solutionAppliquee(1L, risque, 100L), solutionAppliquee(2L, risque, 101L)));
+        when(tacheRepository.findById(100L)).thenReturn(java.util.Optional.of(tache(100L, StatutTache.TERMINEE)));
+        when(tacheRepository.findById(101L)).thenReturn(java.util.Optional.of(tache(101L, StatutTache.REPORTEE)));
+
+        service.cloreSiTachesTerminees(ID_PROJET, 101L);
+
+        assertThat(risque.getStatut()).isEqualTo(StatutRisque.CLOS);
+    }
+
+    @Test
+    void cloreSiTachesTerminees_tacheSansLienAvecLaSolution_neClotPasLeRisque() {
+        Risque risque = risque(25L, "Surcharge", StatutRisque.SOUS_CONTROLE, null);
+        when(risqueRepository.findByProjetIdAndStatut(ID_PROJET, StatutRisque.SOUS_CONTROLE)).thenReturn(Arrays.asList(risque));
+        when(iaRecommandationRepository.findByRisqueIdAndStatut(25L, StatutRecommandation.APPLIQUEE))
+                .thenReturn(Arrays.asList(solutionAppliquee(1L, risque, 100L)));
+
+        service.cloreSiTachesTerminees(ID_PROJET, 999L);
+
+        assertThat(risque.getStatut()).isEqualTo(StatutRisque.SOUS_CONTROLE);
+        verify(risqueRepository, never()).save(risque);
+    }
+
+    private Tache tache(Long id, StatutTache statut) {
+        Tache tache = new Tache();
+        tache.setId(id);
+        tache.setStatut(statut);
+        return tache;
+    }
+
+    private IaRecommandation solutionAppliquee(Long id, Risque risque, Long idTache) {
+        IaRecommandation solution = new IaRecommandation();
+        solution.setId(id);
+        solution.setRisque(risque);
+        solution.setStatut(StatutRecommandation.APPLIQUEE);
+        solution.setResultatApplication(objectMapper.createObjectNode().put("idTache", idTache));
+        return solution;
     }
 
     private Risque risque(Long id, String libelle, StatutRisque statut, Utilisateur porteur) {

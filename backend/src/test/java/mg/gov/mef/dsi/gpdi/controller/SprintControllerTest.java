@@ -6,12 +6,15 @@ import mg.gov.mef.dsi.gpdi.dto.request.SprintRequest;
 import mg.gov.mef.dsi.gpdi.entity.Equipe;
 import mg.gov.mef.dsi.gpdi.entity.Habilitation;
 import mg.gov.mef.dsi.gpdi.entity.NiveauAcces;
+import mg.gov.mef.dsi.gpdi.entity.PartageClient;
 import mg.gov.mef.dsi.gpdi.entity.Priorite;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.Role;
+import mg.gov.mef.dsi.gpdi.entity.StatutPartage;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
 import mg.gov.mef.dsi.gpdi.repository.EquipeRepository;
 import mg.gov.mef.dsi.gpdi.repository.HabilitationRepository;
+import mg.gov.mef.dsi.gpdi.repository.PartageClientRepository;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
 import mg.gov.mef.dsi.gpdi.repository.RoleRepository;
 import mg.gov.mef.dsi.gpdi.repository.SprintRepository;
@@ -85,12 +88,16 @@ class SprintControllerTest {
     @Autowired
     private HabilitationRepository habilitationRepository;
 
+    @Autowired
+    private PartageClientRepository partageClientRepository;
+
     private Long idProjet;
     private Long idAutreProjet;
     private String matriculeResponsable;
 
     @BeforeEach
     void nettoyerBaseEtPreparerFixtures() {
+        partageClientRepository.deleteAll();
         sprintRepository.deleteAll();
         projetRepository.deleteAll();
         equipeRepository.deleteAll();
@@ -149,6 +156,34 @@ class SprintControllerTest {
         return SecurityMockMvcRequestPostProcessors.jwt()
                 .jwt(jwt -> jwt.claim("preferred_username", matriculeResponsable))
                 .authorities(new SimpleGrantedAuthority(ROLE_GESTIONNAIRE));
+    }
+
+    private SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor connecteEnTantQue(String matricule) {
+        return SecurityMockMvcRequestPostProcessors.jwt().jwt(jwt -> jwt.claim("preferred_username", matricule));
+    }
+
+    /** Compte Direction métier avec un partage actif sur le projet fixture : doit pouvoir lire ses sprints. */
+    private void creerClientAvecPartageActif(String matricule) {
+        Role role = new Role();
+        role.setNom("direction_metier");
+        role.setDescription("Direction métier");
+        Role roleEnregistre = roleRepository.save(role);
+
+        Utilisateur client = new Utilisateur();
+        client.setMatricule(matricule);
+        client.setNom("Nom" + matricule);
+        client.setPrenom("Prenom");
+        client.setEmail(matricule + "@test.mg");
+        client.setMotDePasse("HASH");
+        client.setRole(roleEnregistre);
+        Utilisateur clientEnregistre = utilisateurRepository.save(client);
+
+        PartageClient partage = new PartageClient();
+        partage.setClient(clientEnregistre);
+        partage.setProjet(projetRepository.findById(idProjet).get());
+        partage.setStatut(StatutPartage.ACTIF);
+        partage.setDateEcheance(LocalDate.now().plusMonths(1));
+        partageClientRepository.save(partage);
     }
 
     private SprintRequest nouvelleRequete(String nom) {
@@ -313,5 +348,34 @@ class SprintControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(nouvelleRequete("Sprint 6"))))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void rechercher_clientAvecPartageActif_retourneLesSprints() throws Exception {
+        creerSprintEtRecupererId(idProjet, "Sprint 10");
+        creerClientAvecPartageActif("40010");
+
+        mockMvc.perform(get("/api/projets/{idProjet}/sprints", idProjet).with(connecteEnTantQue("40010")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", org.hamcrest.Matchers.hasSize(1)));
+    }
+
+    @Test
+    void rechercher_utilisateurSansPartageNiResponsabilite_retourne403() throws Exception {
+        Role role = new Role();
+        role.setNom("membre_equipe");
+        role.setDescription("Membre équipe");
+        Role roleEnregistre = roleRepository.save(role);
+        Utilisateur sansAcces = new Utilisateur();
+        sansAcces.setMatricule("40011");
+        sansAcces.setNom("Nom40011");
+        sansAcces.setPrenom("Prenom");
+        sansAcces.setEmail("40011@test.mg");
+        sansAcces.setMotDePasse("HASH");
+        sansAcces.setRole(roleEnregistre);
+        utilisateurRepository.save(sansAcces);
+
+        mockMvc.perform(get("/api/projets/{idProjet}/sprints", idProjet).with(connecteEnTantQue("40011")))
+                .andExpect(status().isForbidden());
     }
 }
