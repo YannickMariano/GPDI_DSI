@@ -372,4 +372,65 @@ class NotificationServiceImplTest {
         assertThat(creees.get(0).getType()).isEqualTo(TypeNotification.TACHE);
         assertThat(creees.get(0).getTitre()).isEqualTo("T-10 — Migrer la base terminée par Lala Rabe");
     }
+
+    @Test
+    void notifierDemarrageProjet_membresActifsDeLEquipeEtResponsable_sontNotifies() {
+        Equipe equipe = equipe(3L);
+        Projet projet = projet(utilisateur(1L));
+        projet.setEquipe(equipe);
+        when(membreEquipeRepository.findByEquipeId(3L)).thenReturn(Collections.singletonList(membre(equipe, utilisateur(2L), true)));
+
+        service.notifierDemarrageProjet(projet);
+
+        List<Notification> creees = notificationsEnregistrees(2);
+        assertThat(creees).extracting(n -> n.getDestinataire().getId()).containsExactlyInAnyOrder(1L, 2L);
+        assertThat(creees.get(0).getType()).isEqualTo(TypeNotification.PROJET);
+        assertThat(creees.get(0).getTitre()).isEqualTo("Projet « Portail des marchés » démarré");
+        assertThat(creees.get(0).getLien()).isEqualTo("/projets/1/apercu");
+    }
+
+    @Test
+    void notifierClotureProjet_membresActifsDeLEquipeEtResponsable_sontNotifies() {
+        Equipe equipe = equipe(3L);
+        Projet projet = projet(utilisateur(1L));
+        projet.setEquipe(equipe);
+        when(membreEquipeRepository.findByEquipeId(3L)).thenReturn(Collections.singletonList(membre(equipe, utilisateur(2L), true)));
+
+        service.notifierClotureProjet(projet);
+
+        List<Notification> creees = notificationsEnregistrees(2);
+        assertThat(creees).extracting(n -> n.getDestinataire().getId()).containsExactlyInAnyOrder(1L, 2L);
+        assertThat(creees.get(0).getType()).isEqualTo(TypeNotification.PROJET);
+        assertThat(creees.get(0).getTitre()).isEqualTo("Projet « Portail des marchés » clôturé");
+    }
+
+    @Test
+    void notifierSuspensionProjet_membresActifsDeLEquipeEtResponsable_sontNotifies() {
+        Equipe equipe = equipe(3L);
+        Projet projet = projet(utilisateur(1L));
+        projet.setEquipe(equipe);
+        when(membreEquipeRepository.findByEquipeId(3L)).thenReturn(Collections.singletonList(membre(equipe, utilisateur(2L), true)));
+
+        service.notifierSuspensionProjet(projet);
+
+        List<Notification> creees = notificationsEnregistrees(2);
+        assertThat(creees).extracting(n -> n.getDestinataire().getId()).containsExactlyInAnyOrder(1L, 2L);
+        assertThat(creees.get(0).getType()).isEqualTo(TypeNotification.PROJET);
+        assertThat(creees.get(0).getTitre()).isEqualTo("Projet « Portail des marchés » suspendu");
+    }
+
+    @Test
+    void notifierRepriseProjet_membresActifsDeLEquipeEtResponsable_sontNotifies() {
+        Equipe equipe = equipe(3L);
+        Projet projet = projet(utilisateur(1L));
+        projet.setEquipe(equipe);
+        when(membreEquipeRepository.findByEquipeId(3L)).thenReturn(Collections.singletonList(membre(equipe, utilisateur(2L), true)));
+
+        service.notifierRepriseProjet(projet);
+
+        List<Notification> creees = notificationsEnregistrees(2);
+        assertThat(creees).extracting(n -> n.getDestinataire().getId()).containsExactlyInAnyOrder(1L, 2L);
+        assertThat(creees.get(0).getType()).isEqualTo(TypeNotification.PROJET);
+        assertThat(creees.get(0).getTitre()).isEqualTo("Projet « Portail des marchés » repris");
+    }
 }

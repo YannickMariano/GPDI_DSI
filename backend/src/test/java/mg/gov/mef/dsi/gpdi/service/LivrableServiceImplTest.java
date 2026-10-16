@@ -8,6 +8,7 @@ import mg.gov.mef.dsi.gpdi.entity.Livrable;
 import mg.gov.mef.dsi.gpdi.entity.StatutJalon;
 import mg.gov.mef.dsi.gpdi.entity.StatutLivrable;
 import mg.gov.mef.dsi.gpdi.exception.DateLivraisonInvalideException;
+import mg.gov.mef.dsi.gpdi.exception.JalonAnnuleException;
 import mg.gov.mef.dsi.gpdi.exception.JalonIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.LivrableIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.StatutJalonInvalideException;
@@ -115,6 +116,23 @@ class LivrableServiceImplTest {
 
         assertThatThrownBy(() -> service.creer(1L, request))
                 .isInstanceOf(StatutJalonInvalideException.class);
+    }
+
+    @Test
+    void creer_jalonAnnule_leveJalonAnnuleException() {
+        Jalon jalon = jalonAvecEcheance(1L, LocalDate.now().plusWeeks(2));
+        jalon.setStatut(StatutJalon.ANNULER);
+        LivrableRequest request = new LivrableRequest();
+        request.setDescription("Documentation");
+        request.setType("Document");
+        request.setDateLivraison(LocalDate.now().plusWeeks(1));
+
+        when(jalonRepository.findById(1L)).thenReturn(Optional.of(jalon));
+
+        assertThatThrownBy(() -> service.creer(1L, request))
+                .isInstanceOf(JalonAnnuleException.class);
+
+        verify(livrableRepository, never()).save(any());
     }
 
     @Test
@@ -247,5 +265,80 @@ class LivrableServiceImplTest {
 
         assertThatThrownBy(() -> service.rejeter(1L, 10L, request))
                 .isInstanceOf(StatutLivrableInvalideException.class);
+    }
+
+    private Jalon jalonAnnule(Long id) {
+        Jalon jalon = new Jalon();
+        jalon.setId(id);
+        jalon.setStatut(StatutJalon.ANNULER);
+        return jalon;
+    }
+
+    @Test
+    void modifier_jalonAnnule_leveJalonAnnuleException() {
+        Jalon jalon = jalonAnnule(1L);
+        Livrable livrable = new Livrable();
+        livrable.setId(10L);
+        livrable.setJalon(jalon);
+
+        LivrableRequest request = new LivrableRequest();
+        request.setDateLivraison(LocalDate.now());
+
+        when(livrableRepository.findById(10L)).thenReturn(Optional.of(livrable));
+
+        assertThatThrownBy(() -> service.modifier(1L, 10L, request))
+                .isInstanceOf(JalonAnnuleException.class);
+
+        verify(livrableRepository, never()).save(any());
+    }
+
+    @Test
+    void supprimer_jalonAnnule_leveJalonAnnuleException() {
+        Jalon jalon = jalonAnnule(1L);
+        Livrable livrable = new Livrable();
+        livrable.setId(10L);
+        livrable.setJalon(jalon);
+
+        when(livrableRepository.findById(10L)).thenReturn(Optional.of(livrable));
+
+        assertThatThrownBy(() -> service.supprimer(1L, 10L))
+                .isInstanceOf(JalonAnnuleException.class);
+
+        verify(livrableRepository, never()).delete(any());
+    }
+
+    @Test
+    void livrer_jalonAnnule_leveJalonAnnuleException() {
+        Jalon jalon = jalonAnnule(1L);
+        Livrable livrable = new Livrable();
+        livrable.setId(10L);
+        livrable.setJalon(jalon);
+        livrable.setStatut(StatutLivrable.ATTENDU);
+
+        when(livrableRepository.findById(10L)).thenReturn(Optional.of(livrable));
+
+        assertThatThrownBy(() -> service.livrer(1L, 10L))
+                .isInstanceOf(JalonAnnuleException.class);
+
+        verify(livrableRepository, never()).save(any());
+    }
+
+    @Test
+    void rejeter_jalonAnnule_leveJalonAnnuleException() {
+        Jalon jalon = jalonAnnule(1L);
+        Livrable livrable = new Livrable();
+        livrable.setId(10L);
+        livrable.setJalon(jalon);
+        livrable.setStatut(StatutLivrable.ATTENDU);
+
+        LivrableRejetRequest request = new LivrableRejetRequest();
+        request.setMotifRejet("Non conforme");
+
+        when(livrableRepository.findById(10L)).thenReturn(Optional.of(livrable));
+
+        assertThatThrownBy(() -> service.rejeter(1L, 10L, request))
+                .isInstanceOf(JalonAnnuleException.class);
+
+        verify(livrableRepository, never()).save(any());
     }
 }

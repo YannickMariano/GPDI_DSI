@@ -8,5 +8,6 @@ public enum TypeNotification {
     SPRINT,
     RAPPORT,
     AFFECTATION,
-    TACHE
+    TACHE,
+    PROJET
 }

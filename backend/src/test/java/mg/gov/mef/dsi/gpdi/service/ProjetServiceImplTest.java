@@ -3,12 +3,17 @@ package mg.gov.mef.dsi.gpdi.service;
 import mg.gov.mef.dsi.gpdi.dto.request.ProjetRequest;
 import mg.gov.mef.dsi.gpdi.dto.response.ProjetResponse;
 import mg.gov.mef.dsi.gpdi.entity.Equipe;
+import mg.gov.mef.dsi.gpdi.entity.Jalon;
 import mg.gov.mef.dsi.gpdi.entity.Priorite;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.Role;
+import mg.gov.mef.dsi.gpdi.entity.Sprint;
+import mg.gov.mef.dsi.gpdi.entity.StatutJalon;
 import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
+import mg.gov.mef.dsi.gpdi.entity.StatutSprint;
 import mg.gov.mef.dsi.gpdi.entity.StatutTache;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
+import mg.gov.mef.dsi.gpdi.exception.ClotureProjetImpossibleException;
 import mg.gov.mef.dsi.gpdi.exception.EquipeIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.StatutProjetInvalideException;
@@ -16,7 +21,9 @@ import mg.gov.mef.dsi.gpdi.exception.UtilisateurIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.UtilisateurNonEligibleException;
 import mg.gov.mef.dsi.gpdi.mapper.ProjetMapper;
 import mg.gov.mef.dsi.gpdi.repository.EquipeRepository;
+import mg.gov.mef.dsi.gpdi.repository.JalonRepository;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
+import mg.gov.mef.dsi.gpdi.repository.SprintRepository;
 import mg.gov.mef.dsi.gpdi.repository.TacheRepository;
 import mg.gov.mef.dsi.gpdi.repository.UtilisateurRepository;
 import mg.gov.mef.dsi.gpdi.service.impl.ProjetServiceImpl;
@@ -57,11 +64,21 @@ class ProjetServiceImplTest {
     @Mock
     private TacheRepository tacheRepository;
 
+    @Mock
+    private SprintRepository sprintRepository;
+
+    @Mock
+    private JalonRepository jalonRepository;
+
+    @Mock
+    private NotificationService notificationService;
+
     private ProjetServiceImpl service;
 
     @BeforeEach
     void initService() {
-        service = new ProjetServiceImpl(projetRepository, utilisateurRepository, equipeRepository, projetMapper, habilitationService, tacheRepository);
+        service = new ProjetServiceImpl(projetRepository, utilisateurRepository, equipeRepository, projetMapper,
+                habilitationService, tacheRepository, sprintRepository, jalonRepository, notificationService);
     }
 
     @Test
@@ -229,6 +246,90 @@ class ProjetServiceImplTest {
     }
 
     @Test
+    void demarrer_projetEnPreparation_passeEnCoursEtActiveLequipe() {
+        Equipe equipe = new Equipe();
+        equipe.setId(10L);
+        equipe.setActive(false);
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setStatut(StatutProjet.EN_PREPARATION);
+        projet.setEquipe(equipe);
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+        when(projetRepository.save(projet)).thenReturn(projet);
+        when(projetMapper.toResponse(projet)).thenReturn(new ProjetResponse());
+
+        service.demarrer(1L);
+
+        assertThat(projet.getStatut()).isEqualTo(StatutProjet.EN_COURS);
+        assertThat(equipe.getActive()).isTrue();
+    }
+
+    @Test
+    void demarrer_projetDejaEnCours_leveStatutProjetInvalideException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setStatut(StatutProjet.EN_COURS);
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+
+        assertThatThrownBy(() -> service.demarrer(1L))
+                .isInstanceOf(StatutProjetInvalideException.class);
+
+        verify(projetRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void demarrer_projetInexistant_leveProjetIntrouvableException() {
+        when(projetRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.demarrer(999L))
+                .isInstanceOf(ProjetIntrouvableException.class);
+    }
+
+    @Test
+    void reprendre_projetSuspendu_passeEnCoursEtActiveLequipe() {
+        Equipe equipe = new Equipe();
+        equipe.setId(10L);
+        equipe.setActive(false);
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setStatut(StatutProjet.SUSPENDU);
+        projet.setEquipe(equipe);
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+        when(projetRepository.save(projet)).thenReturn(projet);
+        when(projetMapper.toResponse(projet)).thenReturn(new ProjetResponse());
+
+        service.reprendre(1L);
+
+        assertThat(projet.getStatut()).isEqualTo(StatutProjet.EN_COURS);
+        assertThat(equipe.getActive()).isTrue();
+    }
+
+    @Test
+    void reprendre_projetNonSuspendu_leveStatutProjetInvalideException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setStatut(StatutProjet.EN_COURS);
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+
+        assertThatThrownBy(() -> service.reprendre(1L))
+                .isInstanceOf(StatutProjetInvalideException.class);
+
+        verify(projetRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void reprendre_projetInexistant_leveProjetIntrouvableException() {
+        when(projetRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.reprendre(999L))
+                .isInstanceOf(ProjetIntrouvableException.class);
+    }
+
+    @Test
     void suspendre_projetExistant_fixeStatutSuspendu() {
         Projet projet = new Projet();
         projet.setId(1L);
@@ -375,6 +476,77 @@ class ProjetServiceImplTest {
 
         assertThatThrownBy(() -> service.cloturer(999L))
                 .isInstanceOf(ProjetIntrouvableException.class);
+    }
+
+    private Sprint sprint(StatutSprint statut) {
+        Sprint sprint = new Sprint();
+        sprint.setStatut(statut);
+        return sprint;
+    }
+
+    private Jalon jalon(StatutJalon statut) {
+        Jalon jalon = new Jalon();
+        jalon.setStatut(statut);
+        return jalon;
+    }
+
+    @Test
+    void cloturer_sprintEncoreEnCours_leveClotureProjetImpossibleExceptionEtNeSauvegardeRien() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+        when(sprintRepository.findByProjetId(1L)).thenReturn(java.util.Arrays.asList(
+                sprint(StatutSprint.CLOTURER), sprint(StatutSprint.EN_COURS)));
+
+        assertThatThrownBy(() -> service.cloturer(1L))
+                .isInstanceOf(ClotureProjetImpossibleException.class);
+
+        verify(projetRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void cloturer_jalonEncoreAVenir_leveClotureProjetImpossibleException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+        when(jalonRepository.findByProjetId(1L)).thenReturn(java.util.Arrays.asList(
+                jalon(StatutJalon.ATTEINT), jalon(StatutJalon.A_VENIR)));
+
+        assertThatThrownBy(() -> service.cloturer(1L))
+                .isInstanceOf(ClotureProjetImpossibleException.class);
+
+        verify(projetRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void cloturer_jalonEnRetard_leveClotureProjetImpossibleException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+        when(jalonRepository.findByProjetId(1L)).thenReturn(java.util.Collections.singletonList(jalon(StatutJalon.EN_RETARD)));
+
+        assertThatThrownBy(() -> service.cloturer(1L))
+                .isInstanceOf(ClotureProjetImpossibleException.class);
+    }
+
+    @Test
+    void cloturer_tousSprintsClotureesEtJalonsAtteintsOuAnnules_cloture() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+
+        when(projetRepository.findById(1L)).thenReturn(Optional.of(projet));
+        when(sprintRepository.findByProjetId(1L)).thenReturn(java.util.Collections.singletonList(sprint(StatutSprint.CLOTURER)));
+        when(jalonRepository.findByProjetId(1L)).thenReturn(java.util.Arrays.asList(
+                jalon(StatutJalon.ATTEINT), jalon(StatutJalon.ANNULER)));
+        when(projetRepository.save(projet)).thenReturn(projet);
+        when(projetMapper.toResponse(projet)).thenReturn(new ProjetResponse());
+
+        service.cloturer(1L);
+
+        assertThat(projet.getStatut()).isEqualTo(StatutProjet.CLOTURE);
     }
 
     @Test

@@ -5,9 +5,12 @@ import mg.gov.mef.dsi.gpdi.dto.request.ProjetRequest;
 import mg.gov.mef.dsi.gpdi.dto.response.ProjetResponse;
 import mg.gov.mef.dsi.gpdi.entity.Equipe;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
+import mg.gov.mef.dsi.gpdi.entity.StatutJalon;
 import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
+import mg.gov.mef.dsi.gpdi.entity.StatutSprint;
 import mg.gov.mef.dsi.gpdi.entity.StatutTache;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
+import mg.gov.mef.dsi.gpdi.exception.ClotureProjetImpossibleException;
 import mg.gov.mef.dsi.gpdi.exception.EquipeIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.StatutProjetInvalideException;
@@ -15,10 +18,13 @@ import mg.gov.mef.dsi.gpdi.exception.UtilisateurIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.UtilisateurNonEligibleException;
 import mg.gov.mef.dsi.gpdi.mapper.ProjetMapper;
 import mg.gov.mef.dsi.gpdi.repository.EquipeRepository;
+import mg.gov.mef.dsi.gpdi.repository.JalonRepository;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
+import mg.gov.mef.dsi.gpdi.repository.SprintRepository;
 import mg.gov.mef.dsi.gpdi.repository.TacheRepository;
 import mg.gov.mef.dsi.gpdi.repository.UtilisateurRepository;
 import mg.gov.mef.dsi.gpdi.service.HabilitationService;
+import mg.gov.mef.dsi.gpdi.service.NotificationService;
 import mg.gov.mef.dsi.gpdi.service.ProjetService;
 import mg.gov.mef.dsi.gpdi.util.ProgressionProjet;
 import org.slf4j.Logger;
@@ -50,12 +56,19 @@ public class ProjetServiceImpl implements ProjetService {
     private static final Set<StatutProjet> STATUTS_TERMINAUX =
             EnumSet.of(StatutProjet.CLOTURE, StatutProjet.ARCHIVE);
 
+    /** Un jalon dans l'un de ces statuts est encore "en cours" : il bloque la cloture du projet. */
+    private static final Set<StatutJalon> STATUTS_JALON_BLOQUANT_CLOTURE =
+            EnumSet.of(StatutJalon.A_VENIR, StatutJalon.EN_RETARD);
+
     private final ProjetRepository projetRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final EquipeRepository equipeRepository;
     private final ProjetMapper projetMapper;
     private final HabilitationService habilitationService;
     private final TacheRepository tacheRepository;
+    private final SprintRepository sprintRepository;
+    private final JalonRepository jalonRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -121,6 +134,40 @@ public class ProjetServiceImpl implements ProjetService {
 
     @Override
     @Transactional
+    public ProjetResponse demarrer(Long id) {
+        Projet projet = projetRepository.findById(id)
+                .orElseThrow(() -> new ProjetIntrouvableException(id));
+        if (projet.getStatut() != StatutProjet.EN_PREPARATION) {
+            throw new StatutProjetInvalideException(id, projet.getStatut(), "demarre");
+        }
+        projet.setStatut(StatutProjet.EN_COURS);
+        activerEquipeSiProjetEnCours(projet);
+
+        ProjetResponse reponse = versReponseAvecSante(projetRepository.save(projet));
+        log.info("Projet {} demarre manuellement", id);
+        notificationService.notifierDemarrageProjet(projet);
+        return reponse;
+    }
+
+    @Override
+    @Transactional
+    public ProjetResponse reprendre(Long id) {
+        Projet projet = projetRepository.findById(id)
+                .orElseThrow(() -> new ProjetIntrouvableException(id));
+        if (projet.getStatut() != StatutProjet.SUSPENDU) {
+            throw new StatutProjetInvalideException(id, projet.getStatut(), "repris");
+        }
+        projet.setStatut(StatutProjet.EN_COURS);
+        activerEquipeSiProjetEnCours(projet);
+
+        ProjetResponse reponse = versReponseAvecSante(projetRepository.save(projet));
+        log.info("Projet {} repris", id);
+        notificationService.notifierRepriseProjet(projet);
+        return reponse;
+    }
+
+    @Override
+    @Transactional
     public ProjetResponse suspendre(Long id) {
         Projet projet = projetRepository.findById(id)
                 .orElseThrow(() -> new ProjetIntrouvableException(id));
@@ -128,6 +175,7 @@ public class ProjetServiceImpl implements ProjetService {
 
         ProjetResponse reponse = versReponseAvecSante(projetRepository.save(projet));
         log.info("Projet {} suspendu", id);
+        notificationService.notifierSuspensionProjet(projet);
         return reponse;
     }
 
@@ -137,12 +185,28 @@ public class ProjetServiceImpl implements ProjetService {
         habilitationService.verifierEcriture("Clôture du projet");
         Projet projet = projetRepository.findById(id)
                 .orElseThrow(() -> new ProjetIntrouvableException(id));
+        verifierProjetCloturable(id);
         projet.setStatut(StatutProjet.CLOTURE);
         projet.setDateCloture(LocalDate.now());
 
         ProjetResponse reponse = versReponseAvecSante(projetRepository.save(projet));
         log.info("Projet {} cloture", id);
+        notificationService.notifierClotureProjet(projet);
         return reponse;
+    }
+
+    /**
+     * Un projet ne peut etre cloture que si tous ses sprints sont CLOTURER et tous ses jalons sont
+     * ATTEINT ou ANNULER (plus aucun A_VENIR ni EN_RETARD).
+     */
+    private void verifierProjetCloturable(Long idProjet) {
+        boolean sprintEnCours = sprintRepository.findByProjetId(idProjet).stream()
+                .anyMatch(sprint -> sprint.getStatut() != StatutSprint.CLOTURER);
+        boolean jalonEnCours = jalonRepository.findByProjetId(idProjet).stream()
+                .anyMatch(jalon -> STATUTS_JALON_BLOQUANT_CLOTURE.contains(jalon.getStatut()));
+        if (sprintEnCours || jalonEnCours) {
+            throw new ClotureProjetImpossibleException();
+        }
     }
 
     @Override
@@ -168,6 +232,7 @@ public class ProjetServiceImpl implements ProjetService {
             activerEquipeSiProjetEnCours(projet);
             projetRepository.save(projet);
             log.info("Projet {} demarre automatiquement (date de debut atteinte)", projet.getId());
+            notificationService.notifierDemarrageProjet(projet);
         }
     }
 

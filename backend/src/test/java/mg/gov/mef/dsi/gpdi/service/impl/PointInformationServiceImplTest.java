@@ -4,14 +4,14 @@ import mg.gov.mef.dsi.gpdi.dto.request.PointInformationRequest;
 import mg.gov.mef.dsi.gpdi.dto.response.PointInformationResponse;
 import mg.gov.mef.dsi.gpdi.entity.PointInformation;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
-import mg.gov.mef.dsi.gpdi.entity.StatutPartage;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
 import mg.gov.mef.dsi.gpdi.exception.AccesPointsInformationRefuseException;
+import mg.gov.mef.dsi.gpdi.exception.AccesProjetRefuseException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.mapper.PointInformationMapper;
-import mg.gov.mef.dsi.gpdi.repository.PartageClientRepository;
 import mg.gov.mef.dsi.gpdi.repository.PointInformationRepository;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
+import mg.gov.mef.dsi.gpdi.security.AccesProjetService;
 import mg.gov.mef.dsi.gpdi.security.UtilisateurCourantService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,7 +41,6 @@ class PointInformationServiceImplTest {
 
     private static final Long ID_PROJET = 1L;
     private static final Long ID_RESPONSABLE = 10L;
-    private static final Long ID_CLIENT = 20L;
     private static final Long ID_AUTRE = 30L;
 
     @Mock
@@ -49,28 +48,24 @@ class PointInformationServiceImplTest {
     @Mock
     private ProjetRepository projetRepository;
     @Mock
-    private PartageClientRepository partageClientRepository;
-    @Mock
     private UtilisateurCourantService utilisateurCourantService;
+    @Mock
+    private AccesProjetService accesProjetService;
 
     private PointInformationServiceImpl service;
     private Projet projet;
     private Utilisateur responsable;
-    private Utilisateur client;
     private Utilisateur autre;
 
     @BeforeEach
     void setUp() {
-        service = new PointInformationServiceImpl(pointInformationRepository, projetRepository, partageClientRepository,
-                Mappers.getMapper(PointInformationMapper.class), utilisateurCourantService);
+        service = new PointInformationServiceImpl(pointInformationRepository, projetRepository,
+                Mappers.getMapper(PointInformationMapper.class), utilisateurCourantService, accesProjetService);
 
         responsable = new Utilisateur();
         responsable.setId(ID_RESPONSABLE);
         responsable.setNom("Rabe");
         responsable.setPrenom("Lala");
-
-        client = new Utilisateur();
-        client.setId(ID_CLIENT);
 
         autre = new Utilisateur();
         autre.setId(ID_AUTRE);
@@ -130,39 +125,26 @@ class PointInformationServiceImplTest {
     }
 
     @Test
-    void rechercher_responsableDuProjet_retourneLaPage() {
-        when(utilisateurCourantService.obtenirUtilisateurCourant()).thenReturn(responsable);
+    void rechercher_accesAutorise_delegueAuControleDeLecturePartageableEtRetourneLaPage() {
         Pageable pageable = PageRequest.of(0, 10);
         Page<PointInformation> page = new PageImpl<>(Collections.singletonList(pointInformation("Titre")));
         when(pointInformationRepository.findByProjetIdOrderByDateCreationDesc(ID_PROJET, pageable)).thenReturn(page);
 
         Page<PointInformationResponse> reponse = service.rechercher(ID_PROJET, pageable);
 
+        verify(accesProjetService).verifierAccesLecturePartageable(projet);
         assertThat(reponse.getContent()).hasSize(1);
         assertThat(reponse.getContent().get(0).getTitre()).isEqualTo("Titre");
     }
 
     @Test
-    void rechercher_clientAvecPartageActif_retourneLaPage() {
-        when(utilisateurCourantService.obtenirUtilisateurCourant()).thenReturn(client);
-        when(partageClientRepository.existsByClientIdAndProjetIdAndStatut(ID_CLIENT, ID_PROJET, StatutPartage.ACTIF)).thenReturn(true);
+    void rechercher_accesRefuseParLeControleDeLecturePartageable_propageLexception() {
         Pageable pageable = PageRequest.of(0, 10);
-        when(pointInformationRepository.findByProjetIdOrderByDateCreationDesc(ID_PROJET, pageable))
-                .thenReturn(new PageImpl<>(Collections.singletonList(pointInformation("Titre"))));
-
-        Page<PointInformationResponse> reponse = service.rechercher(ID_PROJET, pageable);
-
-        assertThat(reponse.getContent()).hasSize(1);
-    }
-
-    @Test
-    void rechercher_utilisateurSansPartageActifNiResponsabilite_leveAccesPointsInformationRefuseException() {
-        when(utilisateurCourantService.obtenirUtilisateurCourant()).thenReturn(autre);
-        when(partageClientRepository.existsByClientIdAndProjetIdAndStatut(ID_AUTRE, ID_PROJET, StatutPartage.ACTIF)).thenReturn(false);
-        Pageable pageable = PageRequest.of(0, 10);
+        org.mockito.Mockito.doThrow(new AccesProjetRefuseException(ID_PROJET))
+                .when(accesProjetService).verifierAccesLecturePartageable(projet);
 
         assertThatThrownBy(() -> service.rechercher(ID_PROJET, pageable))
-                .isInstanceOf(AccesPointsInformationRefuseException.class);
+                .isInstanceOf(AccesProjetRefuseException.class);
 
         verify(pointInformationRepository, never()).findByProjetIdOrderByDateCreationDesc(any(Long.class), any(Pageable.class));
     }

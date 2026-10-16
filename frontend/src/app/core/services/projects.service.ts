@@ -196,8 +196,18 @@ export class ProjectsService {
     this._projects.update((list) => list.map((p) => (p.id === id ? versProject(dto) : p)));
   }
 
+  async demarrer(id: string): Promise<void> {
+    const dto = await firstValueFrom(this.http.post<ProjetResponse>(`${environment.apiUrl}/projets/${id}/demarrer`, {}));
+    this._projects.update((list) => list.map((p) => (p.id === id ? versProject(dto) : p)));
+  }
+
   async suspendre(id: string): Promise<void> {
     const dto = await firstValueFrom(this.http.post<ProjetResponse>(`${environment.apiUrl}/projets/${id}/suspendre`, {}));
+    this._projects.update((list) => list.map((p) => (p.id === id ? versProject(dto) : p)));
+  }
+
+  async reprendre(id: string): Promise<void> {
+    const dto = await firstValueFrom(this.http.post<ProjetResponse>(`${environment.apiUrl}/projets/${id}/reprendre`, {}));
     this._projects.update((list) => list.map((p) => (p.id === id ? versProject(dto) : p)));
   }
 

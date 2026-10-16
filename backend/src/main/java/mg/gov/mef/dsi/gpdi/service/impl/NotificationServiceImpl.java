@@ -192,6 +192,38 @@ public class NotificationServiceImpl implements NotificationService {
                 libelle(tache) + " terminée par " + nomComplet(acteur), projet.getTitre(), lienTaches(projet), null);
     }
 
+    @Override
+    @Transactional
+    public void notifierDemarrageProjet(Projet projet) {
+        notifier(destinatairesEquipeEtResponsable(projet), TypeNotification.PROJET, "Projet « " + abreger(projet.getTitre()) + " » démarré",
+                projet.getTitre(), lienApercu(projet), null);
+    }
+
+    @Override
+    @Transactional
+    public void notifierClotureProjet(Projet projet) {
+        notifier(destinatairesEquipeEtResponsable(projet), TypeNotification.PROJET, "Projet « " + abreger(projet.getTitre()) + " » clôturé",
+                projet.getTitre(), lienApercu(projet), null);
+    }
+
+    @Override
+    @Transactional
+    public void notifierSuspensionProjet(Projet projet) {
+        notifier(destinatairesEquipeEtResponsable(projet), TypeNotification.PROJET, "Projet « " + abreger(projet.getTitre()) + " » suspendu",
+                projet.getTitre(), lienApercu(projet), null);
+    }
+
+    @Override
+    @Transactional
+    public void notifierRepriseProjet(Projet projet) {
+        notifier(destinatairesEquipeEtResponsable(projet), TypeNotification.PROJET, "Projet « " + abreger(projet.getTitre()) + " » repris",
+                projet.getTitre(), lienApercu(projet), null);
+    }
+
+    private String lienApercu(Projet projet) {
+        return "/projets/" + projet.getId() + "/apercu";
+    }
+
     /** Membres actifs de l'equipe du projet, plus le responsable (pas necessairement membre de l'equipe lui-meme). */
     private List<Utilisateur> destinatairesEquipeEtResponsable(Projet projet) {
         List<Utilisateur> destinataires = new ArrayList<>(membresActifsDeLEquipe(projet));

@@ -21,6 +21,7 @@ const ALERT_ICON: Record<TypeAlerte, string> = {
   rapport: '▦',
   affectation: '◍',
   tache: '◫',
+  projet: '▤',
 };
 
 @Component({
@@ -79,6 +80,10 @@ export class Header {
 
     return crumbs;
   });
+
+  protected marquerToutesLues(): void {
+    this.notificationsService.markAllAsRead();
+  }
 
   protected openNotification(notification: AppNotification): void {
     this.notificationsService.markAsRead(notification.id);

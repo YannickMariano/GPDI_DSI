@@ -44,6 +44,12 @@
             } @else if (peutGererProjets()) {
               <div class="my-projects__card-actions">
                 <button type="button" class="my-projects__card-action" (click)="ouvrirModification(projet)">Modifier</button>
+                @if (peutDemarrer(projet)) {
+                  <button type="button" class="my-projects__card-action" (click)="demarrerProjet(projet)">Démarrer</button>
+                }
+                @if (peutReprendre(projet)) {
+                  <button type="button" class="my-projects__card-action" (click)="reprendreProjet(projet)">Reprendre</button>
+                }
                 @if (peutSuspendre(projet)) {
                   <button type="button" class="my-projects__card-action" (click)="demanderSuspension(projet)">Suspendre</button>
                 }

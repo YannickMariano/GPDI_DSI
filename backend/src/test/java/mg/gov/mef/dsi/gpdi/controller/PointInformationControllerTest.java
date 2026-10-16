@@ -3,6 +3,8 @@ package mg.gov.mef.dsi.gpdi.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import mg.gov.mef.dsi.gpdi.config.TestSecurityConfig;
 import mg.gov.mef.dsi.gpdi.dto.request.PointInformationRequest;
+import mg.gov.mef.dsi.gpdi.entity.Equipe;
+import mg.gov.mef.dsi.gpdi.entity.MembreEquipe;
 import mg.gov.mef.dsi.gpdi.entity.PartageClient;
 import mg.gov.mef.dsi.gpdi.entity.PointInformation;
 import mg.gov.mef.dsi.gpdi.entity.Priorite;
@@ -10,6 +12,8 @@ import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.Role;
 import mg.gov.mef.dsi.gpdi.entity.StatutPartage;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
+import mg.gov.mef.dsi.gpdi.repository.EquipeRepository;
+import mg.gov.mef.dsi.gpdi.repository.MembreEquipeRepository;
 import mg.gov.mef.dsi.gpdi.repository.PartageClientRepository;
 import mg.gov.mef.dsi.gpdi.repository.PointInformationRepository;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
@@ -49,6 +53,7 @@ class PointInformationControllerTest {
     private static final String MATRICULE_CHEF_PROJET = "95001";
     private static final String MATRICULE_CLIENT = "95002";
     private static final String MATRICULE_SANS_ACCES = "95003";
+    private static final String MATRICULE_MEMBRE_EQUIPE = "95004";
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine");
@@ -74,17 +79,24 @@ class PointInformationControllerTest {
     private UtilisateurRepository utilisateurRepository;
     @Autowired
     private RoleRepository roleRepository;
+    @Autowired
+    private EquipeRepository equipeRepository;
+    @Autowired
+    private MembreEquipeRepository membreEquipeRepository;
 
     private Utilisateur chefDeProjet;
     private Utilisateur client;
     private Utilisateur sansAcces;
+    private Utilisateur membreEquipe;
     private Projet projet;
 
     @BeforeEach
     void nettoyerBaseEtPreparerFixtures() {
         pointInformationRepository.deleteAll();
         partageClientRepository.deleteAll();
+        membreEquipeRepository.deleteAll();
         projetRepository.deleteAll();
+        equipeRepository.deleteAll();
         utilisateurRepository.deleteAll();
         roleRepository.deleteAll();
 
@@ -96,6 +108,11 @@ class PointInformationControllerTest {
         chefDeProjet = creerUtilisateur(MATRICULE_CHEF_PROJET, roleEnregistre);
         client = creerUtilisateur(MATRICULE_CLIENT, roleEnregistre);
         sansAcces = creerUtilisateur(MATRICULE_SANS_ACCES, roleEnregistre);
+        membreEquipe = creerUtilisateur(MATRICULE_MEMBRE_EQUIPE, roleEnregistre);
+
+        Equipe equipe = new Equipe();
+        equipe.setNom("Equipe du projet");
+        Equipe equipeEnregistree = equipeRepository.save(equipe);
 
         Projet nouveauProjet = new Projet();
         nouveauProjet.setTitre("Portail des marchés publics");
@@ -103,7 +120,14 @@ class PointInformationControllerTest {
         nouveauProjet.setDateFin(LocalDate.now().plusMonths(3));
         nouveauProjet.setPriorite(Priorite.NORMALE);
         nouveauProjet.setResponsable(chefDeProjet);
+        nouveauProjet.setEquipe(equipeEnregistree);
         projet = projetRepository.save(nouveauProjet);
+
+        MembreEquipe membre = new MembreEquipe();
+        membre.setEquipe(equipeEnregistree);
+        membre.setUtilisateur(membreEquipe);
+        membre.setActif(true);
+        membreEquipeRepository.save(membre);
 
         PartageClient partage = new PartageClient();
         partage.setClient(client);
@@ -187,6 +211,15 @@ class PointInformationControllerTest {
         creerPoint("Environnement de démonstration ouvert");
 
         mockMvc.perform(get("/api/projets/{id}/points-information", projet.getId()).with(connecteEnTantQue(MATRICULE_CLIENT)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content", hasSize(1)));
+    }
+
+    @Test
+    void rechercher_membreDeLEquipeDuProjet_retourneLesPoints() throws Exception {
+        creerPoint("Point visible par l'équipe");
+
+        mockMvc.perform(get("/api/projets/{id}/points-information", projet.getId()).with(connecteEnTantQue(MATRICULE_MEMBRE_EQUIPE)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(1)));
     }

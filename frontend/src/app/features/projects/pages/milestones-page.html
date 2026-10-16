@@ -62,7 +62,7 @@
                       En attente
                     }
                   </span>
-                  @if (peutGererJalons() && livrable.statut === 'a_livrer') {
+                  @if (peutGererJalons() && peutModifier(jalon) && livrable.statut === 'a_livrer') {
                     <div class="milestones__livrable-actions">
                       <button type="button" class="milestones__livrable-btn" (click)="livrerLivrable(jalon, livrable)">Livrer</button>
                       <button type="button" class="milestones__livrable-btn milestones__livrable-btn--danger" (click)="ouvrirRejet(jalon, livrable)">Rejeter</button>

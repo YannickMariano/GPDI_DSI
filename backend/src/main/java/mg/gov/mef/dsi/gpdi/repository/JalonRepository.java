@@ -13,5 +13,7 @@ public interface JalonRepository extends JpaRepository<Jalon, Long> {
 
     Page<Jalon> findByProjetId(Long idProjet, Pageable pageable);
 
+    List<Jalon> findByProjetId(Long idProjet);
+
     List<Jalon> findByStatutAndDateEcheanceLessThan(StatutJalon statut, LocalDate dateEcheance);
 }

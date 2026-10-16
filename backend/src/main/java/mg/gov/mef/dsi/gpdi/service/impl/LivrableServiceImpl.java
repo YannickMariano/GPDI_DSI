@@ -9,6 +9,7 @@ import mg.gov.mef.dsi.gpdi.entity.Livrable;
 import mg.gov.mef.dsi.gpdi.entity.StatutJalon;
 import mg.gov.mef.dsi.gpdi.entity.StatutLivrable;
 import mg.gov.mef.dsi.gpdi.exception.DateLivraisonInvalideException;
+import mg.gov.mef.dsi.gpdi.exception.JalonAnnuleException;
 import mg.gov.mef.dsi.gpdi.exception.JalonIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.LivrableIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.StatutJalonInvalideException;
@@ -48,6 +49,7 @@ public class LivrableServiceImpl implements LivrableService {
         Jalon jalon = obtenirJalon(idJalon);
         accesProjetService.verifierMembreDuProjet(jalon.getProjet());
         habilitationService.verifierEcriture(FONCTION_JALONS_LIVRABLES);
+        verifierJalonNonAnnule(jalon);
         if (jalon.getStatut() == StatutJalon.ATTEINT) {
             throw new StatutJalonInvalideException(idJalon, jalon.getStatut(), "utilise pour ajouter un livrable");
         }
@@ -83,6 +85,7 @@ public class LivrableServiceImpl implements LivrableService {
         Livrable livrable = obtenirLivrableDuJalon(idJalon, id);
         accesProjetService.verifierMembreDuProjet(livrable.getJalon().getProjet());
         habilitationService.verifierEcriture(FONCTION_JALONS_LIVRABLES);
+        verifierJalonNonAnnule(livrable.getJalon());
         validerDateLivraison(request.getDateLivraison(), livrable.getJalon());
 
         livrableMapper.updateEntity(request, livrable);
@@ -98,6 +101,7 @@ public class LivrableServiceImpl implements LivrableService {
         Livrable livrable = obtenirLivrableDuJalon(idJalon, id);
         accesProjetService.verifierMembreDuProjet(livrable.getJalon().getProjet());
         habilitationService.verifierEcriture(FONCTION_JALONS_LIVRABLES);
+        verifierJalonNonAnnule(livrable.getJalon());
         livrableRepository.delete(livrable);
         log.info("Livrable {} supprime", id);
     }
@@ -108,6 +112,7 @@ public class LivrableServiceImpl implements LivrableService {
         Livrable livrable = obtenirLivrableDuJalon(idJalon, id);
         accesProjetService.verifierMembreDuProjet(livrable.getJalon().getProjet());
         habilitationService.verifierEcriture(FONCTION_JALONS_LIVRABLES);
+        verifierJalonNonAnnule(livrable.getJalon());
         if (livrable.getStatut() != StatutLivrable.ATTENDU) {
             throw new StatutLivrableInvalideException(id, livrable.getStatut(), "marque comme livre");
         }
@@ -125,6 +130,7 @@ public class LivrableServiceImpl implements LivrableService {
         Livrable livrable = obtenirLivrableDuJalon(idJalon, id);
         accesProjetService.verifierMembreDuProjet(livrable.getJalon().getProjet());
         habilitationService.verifierEcriture(FONCTION_JALONS_LIVRABLES);
+        verifierJalonNonAnnule(livrable.getJalon());
         if (livrable.getStatut() != StatutLivrable.ATTENDU) {
             throw new StatutLivrableInvalideException(id, livrable.getStatut(), "rejete");
         }
@@ -135,6 +141,13 @@ public class LivrableServiceImpl implements LivrableService {
         LivrableResponse reponse = livrableMapper.toResponse(livrableRepository.save(livrable));
         log.info("Livrable {} rejete", id);
         return reponse;
+    }
+
+    /** Un jalon annule est fige : plus aucune action sur lui ni sur les livrables qui lui sont lies. */
+    private void verifierJalonNonAnnule(Jalon jalon) {
+        if (jalon.getStatut() == StatutJalon.ANNULER) {
+            throw new JalonAnnuleException(jalon.getId());
+        }
     }
 
     private Jalon obtenirJalon(Long idJalon) {

@@ -2,6 +2,7 @@ package mg.gov.mef.dsi.gpdi.service;
 
 import mg.gov.mef.dsi.gpdi.dto.response.NotificationResponse;
 import mg.gov.mef.dsi.gpdi.entity.Jalon;
+import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.RapportDiffuse;
 import mg.gov.mef.dsi.gpdi.entity.Sprint;
 import mg.gov.mef.dsi.gpdi.entity.Tache;
@@ -48,4 +49,16 @@ public interface NotificationService {
 
     /** Previent les membres actifs de l'equipe du projet et le responsable qu'une tache vient d'etre terminee. */
     void notifierClotureTache(Tache tache, Utilisateur acteur);
+
+    /** Previent les membres actifs de l'equipe du projet et le responsable que le projet vient de demarrer. */
+    void notifierDemarrageProjet(Projet projet);
+
+    /** Previent les membres actifs de l'equipe du projet et le responsable que le projet vient d'etre cloture. */
+    void notifierClotureProjet(Projet projet);
+
+    /** Previent les membres actifs de l'equipe du projet et le responsable que le projet vient d'etre suspendu. */
+    void notifierSuspensionProjet(Projet projet);
+
+    /** Previent les membres actifs de l'equipe du projet et le responsable que le projet vient d'etre repris. */
+    void notifierRepriseProjet(Projet projet);
 }

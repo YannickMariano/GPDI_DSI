@@ -103,6 +103,14 @@ export class MyProjectsPage {
     return projet.statut === 'archive';
   }
 
+  peutDemarrer(projet: Project): boolean {
+    return projet.statut === 'en_preparation';
+  }
+
+  peutReprendre(projet: Project): boolean {
+    return projet.statut === 'suspendu';
+  }
+
   peutSuspendre(projet: Project): boolean {
     return projet.statut === 'en_cours' || projet.statut === 'en_preparation';
   }
@@ -198,6 +206,26 @@ export class MyProjectsPage {
       this.toast.show({ type: 'success', message: `${projet.nom} archivé.` });
     } finally {
       this.projetAArchiver.set(null);
+    }
+  }
+
+  // --- Démarrage ---
+
+  async demarrerProjet(projet: Project): Promise<void> {
+    try {
+      await this.projectsService.demarrer(projet.id);
+      this.toast.show({ type: 'success', message: `${projet.nom} démarré.` });
+    } catch {
+      // Message d'erreur déjà affiché par l'intercepteur HTTP global.
+    }
+  }
+
+  async reprendreProjet(projet: Project): Promise<void> {
+    try {
+      await this.projectsService.reprendre(projet.id);
+      this.toast.show({ type: 'success', message: `${projet.nom} repris.` });
+    } catch {
+      // Message d'erreur déjà affiché par l'intercepteur HTTP global.
     }
   }
 

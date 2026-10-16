@@ -14,6 +14,7 @@ const TYPE_CONFIG: Record<TypeAlerte, { label: string; color: string }> = {
   rapport: { label: 'Rapport', color: 'var(--color-action)' },
   affectation: { label: 'Affectation', color: 'var(--color-text-secondary)' },
   tache: { label: 'Tâche', color: 'var(--color-success-text)' },
+  projet: { label: 'Projet', color: 'var(--color-action)' },
 };
 
 @Component({

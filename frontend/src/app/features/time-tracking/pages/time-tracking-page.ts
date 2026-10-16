@@ -32,7 +32,11 @@ export class TimeTrackingPage {
   protected readonly mesProjets = computed(() => {
     const user = this.authService.currentUser();
     if (!user) return [];
-    return this.projectsService.pourUtilisateur(user, this.tasksService.tasks());
+    // Un projet suspendu, clôturé ou archivé reste consultable dans Mes projets, mais ne doit plus
+    // être choisi ici pour saisir du temps dessus.
+    return this.projectsService
+      .pourUtilisateur(user, this.tasksService.tasks())
+      .filter((p) => p.statut !== 'suspendu' && p.statut !== 'cloture' && p.statut !== 'archive');
   });
 
   private readonly projetFiltreManuel = signal<string>('toutes');

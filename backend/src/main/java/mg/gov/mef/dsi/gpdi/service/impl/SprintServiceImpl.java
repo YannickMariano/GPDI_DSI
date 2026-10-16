@@ -5,9 +5,11 @@ import mg.gov.mef.dsi.gpdi.dto.request.SprintRequest;
 import mg.gov.mef.dsi.gpdi.dto.response.SprintResponse;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.Sprint;
+import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
 import mg.gov.mef.dsi.gpdi.entity.StatutSprint;
 import mg.gov.mef.dsi.gpdi.exception.DateHorsPeriodeProjetException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
+import mg.gov.mef.dsi.gpdi.exception.ProjetNonDemarreException;
 import mg.gov.mef.dsi.gpdi.exception.SprintChevauchementException;
 import mg.gov.mef.dsi.gpdi.exception.SprintIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.SprintPrecedentNonClotureException;
@@ -113,6 +115,9 @@ public class SprintServiceImpl implements SprintService {
         if (sprint.getStatut() != StatutSprint.PLANIFIE) {
             throw new StatutSprintInvalideException(id, sprint.getStatut(), "demarre");
         }
+        if (sprint.getProjet().getStatut() == StatutProjet.EN_PREPARATION) {
+            throw new ProjetNonDemarreException("demarrer ce sprint");
+        }
         // Demarrage manuel possible avant la date de debut, a condition que le sprint precedent soit cloture.
         Sprint precedent = sprintPrecedent(sprint);
         if (precedent != null && precedent.getStatut() != StatutSprint.CLOTURER) {
@@ -171,6 +176,10 @@ public class SprintServiceImpl implements SprintService {
 
     /** Demarrage automatique : seulement si le sprint precedent est cloture et qu'aucun autre sprint du projet n'est en cours. */
     private void demarrerAutomatiquementSiPossible(Sprint sprint) {
+        if (sprint.getProjet() != null && sprint.getProjet().getStatut() == StatutProjet.EN_PREPARATION) {
+            log.info("Sprint {} non demarre automatiquement : le projet n'est pas encore demarre", sprint.getId());
+            return;
+        }
         Sprint precedent = sprintPrecedent(sprint);
         if (precedent != null && precedent.getStatut() != StatutSprint.CLOTURER) {
             log.info("Sprint {} non demarre automatiquement : le sprint precedent {} n'est pas cloture", sprint.getId(), precedent.getId());

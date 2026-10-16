@@ -7,10 +7,12 @@ import mg.gov.mef.dsi.gpdi.entity.Jalon;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.StatutJalon;
 import mg.gov.mef.dsi.gpdi.entity.StatutLivrable;
+import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
 import mg.gov.mef.dsi.gpdi.exception.DateHorsPeriodeProjetException;
 import mg.gov.mef.dsi.gpdi.exception.JalonIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.LivrableEnAttenteException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
+import mg.gov.mef.dsi.gpdi.exception.ProjetNonDemarreException;
 import mg.gov.mef.dsi.gpdi.exception.StatutJalonInvalideException;
 import mg.gov.mef.dsi.gpdi.mapper.JalonMapper;
 import mg.gov.mef.dsi.gpdi.repository.JalonRepository;
@@ -92,7 +94,7 @@ public class JalonServiceImpl implements JalonService {
         Jalon jalon = obtenirJalonDuProjet(idProjet, id);
         accesProjetService.verifierMembreDuProjet(jalon.getProjet());
         habilitationService.verifierEcriture(FONCTION_JALONS_LIVRABLES);
-        if (jalon.getStatut() == StatutJalon.ATTEINT) {
+        if (jalon.getStatut() == StatutJalon.ATTEINT || jalon.getStatut() == StatutJalon.ANNULER) {
             throw new StatutJalonInvalideException(id, jalon.getStatut(), "modifie");
         }
         verifierDateDansLePerimetreDuProjet(jalon.getProjet(), request.getDateEcheance());
@@ -121,6 +123,9 @@ public class JalonServiceImpl implements JalonService {
         habilitationService.verifierEcriture(FONCTION_JALONS_LIVRABLES);
         if (!STATUTS_NON_TERMINAUX.contains(jalon.getStatut())) {
             throw new StatutJalonInvalideException(id, jalon.getStatut(), "marque comme atteint");
+        }
+        if (jalon.getProjet().getStatut() == StatutProjet.EN_PREPARATION) {
+            throw new ProjetNonDemarreException("cloturer ce jalon");
         }
         if (livrableRepository.existsByJalonIdAndStatut(id, StatutLivrable.ATTENDU)) {
             throw new LivrableEnAttenteException(id);

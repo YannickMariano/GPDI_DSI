@@ -10,6 +10,7 @@ import mg.gov.mef.dsi.gpdi.entity.PartageClient;
 import mg.gov.mef.dsi.gpdi.entity.Priorite;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.Role;
+import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
 import mg.gov.mef.dsi.gpdi.entity.StatutPartage;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
 import mg.gov.mef.dsi.gpdi.repository.EquipeRepository;
@@ -143,6 +144,8 @@ class JalonControllerTest {
         projet.setPriorite(Priorite.NORMALE);
         projet.setResponsable(responsableEnregistre);
         projet.setEquipe(equipeEnregistree);
+        // En cours : un jalon ne peut etre cloture que si le projet auquel il appartient l'est deja.
+        projet.setStatut(StatutProjet.EN_COURS);
         return projetRepository.save(projet).getId();
     }
 
@@ -241,6 +244,18 @@ class JalonControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.statut").value("ATTEINT"))
                 .andExpect(jsonPath("$.dateValidation").value(LocalDate.now().toString()));
+    }
+
+    @Test
+    void terminer_projetEnPreparation_retourne400() throws Exception {
+        Long idJalon = creerJalonEtRecupererId(idProjet, "Jalon 4bis");
+        Projet projet = projetRepository.findById(idProjet).get();
+        projet.setStatut(StatutProjet.EN_PREPARATION);
+        projetRepository.save(projet);
+
+        mockMvc.perform(post("/api/projets/{idProjet}/jalons/{id}/terminer", idProjet, idJalon)
+                .with(utilisateurConnecte()))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

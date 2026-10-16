@@ -56,10 +56,22 @@ public class ProjetController {
         return ResponseEntity.ok(projetService.modifier(id, request));
     }
 
+    @PostMapping("/{id}/demarrer")
+    @Operation(summary = "Demarrer manuellement un projet EN_PREPARATION (statut EN_COURS)")
+    public ResponseEntity<ProjetResponse> demarrer(@PathVariable Long id) {
+        return ResponseEntity.ok(projetService.demarrer(id));
+    }
+
     @PostMapping("/{id}/suspendre")
     @Operation(summary = "Suspendre un projet (statut SUSPENDU)")
     public ResponseEntity<ProjetResponse> suspendre(@PathVariable Long id) {
         return ResponseEntity.ok(projetService.suspendre(id));
+    }
+
+    @PostMapping("/{id}/reprendre")
+    @Operation(summary = "Reprendre un projet SUSPENDU (statut EN_COURS)")
+    public ResponseEntity<ProjetResponse> reprendre(@PathVariable Long id) {
+        return ResponseEntity.ok(projetService.reprendre(id));
     }
 
     @PostMapping("/{id}/cloturer")

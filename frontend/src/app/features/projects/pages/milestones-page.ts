@@ -15,7 +15,7 @@ const STATUT_STYLE: Record<string, { label: string; bg: string; text: string; ic
   atteint: { label: 'Atteint', bg: 'var(--status-terminee-bg)', text: 'var(--status-terminee-text)', icone: '✓' },
   a_risque: { label: 'À risque', bg: 'var(--status-bloquee-bg)', text: 'var(--status-bloquee-text)', icone: '!' },
   planifie: { label: 'Planifié', bg: 'var(--status-a-faire-bg)', text: 'var(--status-a-faire-text)', icone: '◇' },
-  annule: { label: 'Annulé', bg: 'var(--color-surface-alt)', text: 'var(--color-text-tertiary)', icone: '✕' },
+  annule: { label: 'Annulé', bg: 'var(--color-error-bg)', text: 'var(--color-error-text)', icone: '✕' },
 };
 
 const LIVRABLE_STATUT_STYLE: Record<string, { label: string; bg: string; text: string }> = {
@@ -165,9 +165,9 @@ export class MilestonesPage {
     return jalon.statut === 'planifie' || jalon.statut === 'a_risque';
   }
 
-  /** Un jalon terminé (atteint) est verrouillé : ni modification, ni nouveau livrable. */
+  /** Un jalon terminé (atteint) ou annulé est verrouillé : ni modification, ni nouveau livrable, ni action sur ses livrables déjà créés. */
   peutModifier(jalon: Milestone): boolean {
-    return jalon.statut !== 'atteint';
+    return jalon.statut !== 'atteint' && jalon.statut !== 'annule';
   }
 
   // --- Ajout d'un livrable ---

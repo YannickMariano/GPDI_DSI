@@ -6,6 +6,7 @@ import mg.gov.mef.dsi.gpdi.entity.Jalon;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.StatutJalon;
 import mg.gov.mef.dsi.gpdi.entity.StatutLivrable;
+import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
 import mg.gov.mef.dsi.gpdi.exception.JalonIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.LivrableEnAttenteException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
@@ -30,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -180,9 +182,28 @@ class JalonServiceImplTest {
     }
 
     @Test
+    void terminer_projetEnPreparation_leveProjetNonDemarreException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setStatut(StatutProjet.EN_PREPARATION);
+        Jalon jalon = new Jalon();
+        jalon.setId(10L);
+        jalon.setProjet(projet);
+        jalon.setStatut(StatutJalon.A_VENIR);
+
+        when(jalonRepository.findById(10L)).thenReturn(Optional.of(jalon));
+
+        assertThatThrownBy(() -> service.terminer(1L, 10L))
+                .isInstanceOf(mg.gov.mef.dsi.gpdi.exception.ProjetNonDemarreException.class);
+
+        verify(jalonRepository, never()).save(any());
+    }
+
+    @Test
     void terminer_jalonAVenir_passeEnAtteintEtFixeDateValidation() {
         Projet projet = new Projet();
         projet.setId(1L);
+        projet.setStatut(StatutProjet.EN_COURS);
         Jalon jalon = new Jalon();
         jalon.setId(10L);
         jalon.setProjet(projet);
@@ -236,9 +257,25 @@ class JalonServiceImplTest {
     }
 
     @Test
+    void modifier_jalonAnnule_leveStatutJalonInvalideException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        Jalon jalon = new Jalon();
+        jalon.setId(10L);
+        jalon.setProjet(projet);
+        jalon.setStatut(StatutJalon.ANNULER);
+
+        when(jalonRepository.findById(10L)).thenReturn(Optional.of(jalon));
+
+        assertThatThrownBy(() -> service.modifier(1L, 10L, requeteValide()))
+                .isInstanceOf(StatutJalonInvalideException.class);
+    }
+
+    @Test
     void terminer_jalonAvecLivrableEnAttente_leveLivrableEnAttenteException() {
         Projet projet = new Projet();
         projet.setId(1L);
+        projet.setStatut(StatutProjet.EN_COURS);
         Jalon jalon = new Jalon();
         jalon.setId(10L);
         jalon.setProjet(projet);

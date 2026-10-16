@@ -5,14 +5,13 @@ import mg.gov.mef.dsi.gpdi.dto.request.PointInformationRequest;
 import mg.gov.mef.dsi.gpdi.dto.response.PointInformationResponse;
 import mg.gov.mef.dsi.gpdi.entity.PointInformation;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
-import mg.gov.mef.dsi.gpdi.entity.StatutPartage;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
 import mg.gov.mef.dsi.gpdi.exception.AccesPointsInformationRefuseException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.mapper.PointInformationMapper;
-import mg.gov.mef.dsi.gpdi.repository.PartageClientRepository;
 import mg.gov.mef.dsi.gpdi.repository.PointInformationRepository;
 import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
+import mg.gov.mef.dsi.gpdi.security.AccesProjetService;
 import mg.gov.mef.dsi.gpdi.security.UtilisateurCourantService;
 import mg.gov.mef.dsi.gpdi.service.PointInformationService;
 import org.slf4j.Logger;
@@ -24,10 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * L'acces n'est pas restreint par un role Keycloak dedie (l'endpoint ne demande que d'etre authentifie) :
- * la regle metier - chef de projet du projet, ou compte client avec un partage actif sur ce projet precis -
- * est verifiee ici, comme pour les notifications. Cela evite d'accorder un role large a tous les comptes
- * clients pour une simple lecture, et cela verifie reellement le perimetre partage (contrairement aux
- * jalons/livrables, ouverts a tout titulaire du role, quel que soit le projet demande).
+ * la regle metier est verifiee ici, comme pour les notifications.
+ * Publication : reservee au chef de projet (le seul a diffuser un point d'information au client).
+ * Lecture : ouverte a tous les membres du projet (vue d'ensemble du projet), au Directeur DSI, et a un
+ * compte client avec un partage actif sur ce projet precis (meme perimetre que jalons/livrables/sprints).
  */
 @Service
 @RequiredArgsConstructor
@@ -37,9 +36,9 @@ public class PointInformationServiceImpl implements PointInformationService {
 
     private final PointInformationRepository pointInformationRepository;
     private final ProjetRepository projetRepository;
-    private final PartageClientRepository partageClientRepository;
     private final PointInformationMapper pointInformationMapper;
     private final UtilisateurCourantService utilisateurCourantService;
+    private final AccesProjetService accesProjetService;
 
     @Override
     @Transactional
@@ -65,20 +64,13 @@ public class PointInformationServiceImpl implements PointInformationService {
     @Transactional(readOnly = true)
     public Page<PointInformationResponse> rechercher(Long idProjet, Pageable pageable) {
         Projet projet = obtenirProjet(idProjet);
-        Utilisateur utilisateurCourant = utilisateurCourantService.obtenirUtilisateurCourant();
-        if (!estResponsableDuProjet(projet, utilisateurCourant) && !aUnPartageActif(projet, utilisateurCourant)) {
-            throw new AccesPointsInformationRefuseException(idProjet);
-        }
+        accesProjetService.verifierAccesLecturePartageable(projet);
         return pointInformationRepository.findByProjetIdOrderByDateCreationDesc(idProjet, pageable)
                 .map(pointInformationMapper::toResponse);
     }
 
     private boolean estResponsableDuProjet(Projet projet, Utilisateur utilisateur) {
         return projet.getResponsable() != null && projet.getResponsable().getId().equals(utilisateur.getId());
-    }
-
-    private boolean aUnPartageActif(Projet projet, Utilisateur utilisateur) {
-        return partageClientRepository.existsByClientIdAndProjetIdAndStatut(utilisateur.getId(), projet.getId(), StatutPartage.ACTIF);
     }
 
     private Projet obtenirProjet(Long idProjet) {

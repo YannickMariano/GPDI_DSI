@@ -40,7 +40,10 @@
       <div class="topbar__notif-panel" aria-label="Liste des notifications">
         <div class="topbar__notif-header">
           <span>Notifications</span>
-          <a routerLink="/alertes" class="topbar__notif-all">Tout voir</a>
+          <div class="topbar__notif-actions">
+            <button type="button" class="topbar__notif-all topbar__notif-mark-all" (click)="marquerToutesLues()">Tout marquer lu</button>
+            <a routerLink="/alertes" class="topbar__notif-all">Tout voir</a>
+          </div>
         </div>
         @for (notification of notifications(); track notification.id) {
           <button type="button" class="topbar__notif-item" [class.topbar__notif-item--unread]="!notification.lu" (click)="openNotification(notification)">

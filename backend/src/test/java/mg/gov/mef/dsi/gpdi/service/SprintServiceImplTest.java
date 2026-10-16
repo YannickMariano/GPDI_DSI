@@ -4,6 +4,7 @@ import mg.gov.mef.dsi.gpdi.dto.request.SprintRequest;
 import mg.gov.mef.dsi.gpdi.dto.response.SprintResponse;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.Sprint;
+import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
 import mg.gov.mef.dsi.gpdi.entity.StatutSprint;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.SprintChevauchementException;
@@ -358,9 +359,28 @@ class SprintServiceImplTest {
     }
 
     @Test
+    void commencer_projetEnPreparation_leveProjetNonDemarreException() {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        projet.setStatut(StatutProjet.EN_PREPARATION);
+        Sprint sprint = new Sprint();
+        sprint.setId(10L);
+        sprint.setProjet(projet);
+        sprint.setStatut(StatutSprint.PLANIFIE);
+
+        when(sprintRepository.findById(10L)).thenReturn(Optional.of(sprint));
+
+        assertThatThrownBy(() -> service.commencer(1L, 10L))
+                .isInstanceOf(mg.gov.mef.dsi.gpdi.exception.ProjetNonDemarreException.class);
+
+        verify(sprintRepository, never()).save(any());
+    }
+
+    @Test
     void commencer_sprintPlanifie_passeEnCours() {
         Projet projet = new Projet();
         projet.setId(1L);
+        projet.setStatut(StatutProjet.EN_COURS);
         Sprint sprint = new Sprint();
         sprint.setId(10L);
         sprint.setProjet(projet);
@@ -394,6 +414,7 @@ class SprintServiceImplTest {
     void commencer_avantSaDateMaisSprintPrecedentNonCloture_leveSprintPrecedentNonClotureException() {
         Projet projet = new Projet();
         projet.setId(1L);
+        projet.setStatut(StatutProjet.EN_COURS);
         Sprint precedent = sprintDuProjet(projet, 9L, StatutSprint.EN_COURS, LocalDate.now().minusWeeks(2));
         Sprint sprint = sprintDuProjet(projet, 10L, StatutSprint.PLANIFIE, LocalDate.now().plusWeeks(1));
 
@@ -408,6 +429,7 @@ class SprintServiceImplTest {
     void commencer_avantSaDateEtSprintPrecedentCloture_passeEnCours() {
         Projet projet = new Projet();
         projet.setId(1L);
+        projet.setStatut(StatutProjet.EN_COURS);
         Sprint precedent = sprintDuProjet(projet, 9L, StatutSprint.CLOTURER, LocalDate.now().minusWeeks(2));
         Sprint sprint = sprintDuProjet(projet, 10L, StatutSprint.PLANIFIE, LocalDate.now().plusWeeks(1));
 
@@ -425,11 +447,13 @@ class SprintServiceImplTest {
     void demarrerLesSprintsArrivesADateDeDebut_demarreSeulementSiLePrecedentEstCloture() {
         Projet projetA = new Projet();
         projetA.setId(1L);
+        projetA.setStatut(StatutProjet.EN_COURS);
         Sprint precedentCloture = sprintDuProjet(projetA, 1L, StatutSprint.CLOTURER, LocalDate.now().minusWeeks(2));
         Sprint aDemarrer = sprintDuProjet(projetA, 2L, StatutSprint.PLANIFIE, LocalDate.now());
 
         Projet projetB = new Projet();
         projetB.setId(2L);
+        projetB.setStatut(StatutProjet.EN_COURS);
         Sprint precedentEnRetard = sprintDuProjet(projetB, 3L, StatutSprint.EN_COURS, LocalDate.now().minusWeeks(2));
         Sprint enAttente = sprintDuProjet(projetB, 4L, StatutSprint.PLANIFIE, LocalDate.now());
 

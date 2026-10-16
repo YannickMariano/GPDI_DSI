@@ -11,6 +11,7 @@ import mg.gov.mef.dsi.gpdi.entity.Priorite;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.Role;
 import mg.gov.mef.dsi.gpdi.entity.StatutPartage;
+import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
 import mg.gov.mef.dsi.gpdi.repository.EquipeRepository;
 import mg.gov.mef.dsi.gpdi.repository.HabilitationRepository;
@@ -149,6 +150,8 @@ class SprintControllerTest {
         projet.setPriorite(Priorite.NORMALE);
         projet.setResponsable(responsableEnregistre);
         projet.setEquipe(equipeEnregistree);
+        // En cours : un sprint ne peut demarrer que si le projet auquel il appartient l'est deja.
+        projet.setStatut(StatutProjet.EN_COURS);
         return projetRepository.save(projet).getId();
     }
 
@@ -319,6 +322,18 @@ class SprintControllerTest {
                 .with(utilisateurConnecte()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.statut").value("EN_COURS"));
+    }
+
+    @Test
+    void commencer_projetEnPreparation_retourne400() throws Exception {
+        Long idSprint = creerSprintEtRecupererId(idProjet, "Sprint 7bis");
+        Projet projet = projetRepository.findById(idProjet).get();
+        projet.setStatut(StatutProjet.EN_PREPARATION);
+        projetRepository.save(projet);
+
+        mockMvc.perform(post("/api/projets/{idProjet}/sprints/{id}/commencer", idProjet, idSprint)
+                .with(utilisateurConnecte()))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

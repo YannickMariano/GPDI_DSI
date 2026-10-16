@@ -234,6 +234,30 @@ class ProjetControllerTest {
     }
 
     @Test
+    void demarrer_projetEnPreparation_passeEnCoursEtActiveLequipe() throws Exception {
+        Long idProjet = creerProjetEtRecupererId("Projet Kappa");
+
+        mockMvc.perform(post("/api/projets/{id}/demarrer", idProjet)
+                .with(utilisateurConnecte()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.statut").value("EN_COURS"));
+
+        Equipe equipe = equipeRepository.findById(idEquipe).orElseThrow(
+                () -> new IllegalStateException("Equipe introuvable"));
+        org.assertj.core.api.Assertions.assertThat(equipe.getActive()).isTrue();
+    }
+
+    @Test
+    void demarrer_projetDejaEnCours_retourne400() throws Exception {
+        Long idProjet = creerProjetEtRecupererId("Projet Lambda");
+        mockMvc.perform(post("/api/projets/{id}/demarrer", idProjet).with(utilisateurConnecte()));
+
+        mockMvc.perform(post("/api/projets/{id}/demarrer", idProjet)
+                .with(utilisateurConnecte()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void suspendre_projetExistant_fixeStatutSuspendu() throws Exception {
         Long idProjet = creerProjetEtRecupererId("Projet Eta");
 
@@ -241,6 +265,26 @@ class ProjetControllerTest {
                 .with(utilisateurConnecte()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.statut").value("SUSPENDU"));
+    }
+
+    @Test
+    void reprendre_projetSuspendu_passeEnCours() throws Exception {
+        Long idProjet = creerProjetEtRecupererId("Projet Mu");
+        mockMvc.perform(post("/api/projets/{id}/suspendre", idProjet).with(utilisateurConnecte()));
+
+        mockMvc.perform(post("/api/projets/{id}/reprendre", idProjet)
+                .with(utilisateurConnecte()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.statut").value("EN_COURS"));
+    }
+
+    @Test
+    void reprendre_projetNonSuspendu_retourne400() throws Exception {
+        Long idProjet = creerProjetEtRecupererId("Projet Nu");
+
+        mockMvc.perform(post("/api/projets/{id}/reprendre", idProjet)
+                .with(utilisateurConnecte()))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

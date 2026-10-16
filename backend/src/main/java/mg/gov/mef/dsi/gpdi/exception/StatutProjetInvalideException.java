@@ -8,4 +8,9 @@ public class StatutProjetInvalideException extends RuntimeException {
         super("Le statut " + statut
                 + " ne peut pas etre defini directement ; utilisez les actions dediees (cloturer/archiver).");
     }
+
+    public StatutProjetInvalideException(Long idProjet, StatutProjet statutActuel, String actionDemandee) {
+        super("Le projet " + idProjet + " ne peut pas etre " + actionDemandee
+                + " depuis le statut " + statutActuel + ".");
+    }
 }

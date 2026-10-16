@@ -142,6 +142,24 @@ public class GlobalExceptionHandler {
                         .body(new ErreurResponse(exception.getMessage()));
         }
 
+        @ExceptionHandler(JalonAnnuleException.class)
+        public ResponseEntity<ErreurResponse> gererJalonAnnule(JalonAnnuleException exception) {
+                return ResponseEntity.badRequest()
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
+        @ExceptionHandler(ClotureProjetImpossibleException.class)
+        public ResponseEntity<ErreurResponse> gererClotureProjetImpossible(ClotureProjetImpossibleException exception) {
+                return ResponseEntity.badRequest()
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
+        @ExceptionHandler(ProjetNonDemarreException.class)
+        public ResponseEntity<ErreurResponse> gererProjetNonDemarre(ProjetNonDemarreException exception) {
+                return ResponseEntity.badRequest()
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
         @ExceptionHandler(LivrableEnAttenteException.class)
         public ResponseEntity<ErreurResponse> gererLivrableEnAttente(LivrableEnAttenteException exception) {
                 return ResponseEntity.badRequest()

@@ -15,7 +15,13 @@ public interface ProjetService {
 
     ProjetResponse modifier(Long id, ProjetRequest request);
 
+    /** Demarrage manuel d'un projet EN_PREPARATION, sans attendre sa date de debut. */
+    ProjetResponse demarrer(Long id);
+
     ProjetResponse suspendre(Long id);
+
+    /** Reprise manuelle d'un projet SUSPENDU (retour au statut EN_COURS). */
+    ProjetResponse reprendre(Long id);
 
     ProjetResponse cloturer(Long id);
 
