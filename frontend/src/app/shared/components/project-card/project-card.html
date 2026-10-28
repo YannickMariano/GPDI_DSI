@@ -2,7 +2,12 @@
   <div class="project-card__header">
     <div>
       <div class="project-card__name">{{ project().nom }}</div>
-      <div class="project-card__direction">{{ project().direction }}</div>
+      @if (showDirection()) {
+        <div class="project-card__direction">{{ project().direction }}</div>
+      }
+      @if (statutBadge(); as badge) {
+        <span class="project-card__statut" [style.background]="badge.bg" [style.color]="badge.text">{{ badge.label }}</span>
+      }
     </div>
     <span class="project-card__sante" [style.background]="sante().bg" [style.color]="sante().text">{{ sante().label }}</span>
   </div>

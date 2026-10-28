@@ -4,25 +4,41 @@
     <p>{{ compteurs().tous }} projets suivis par la DSI</p>
   </header>
 
-  <div class="portfolio__filters" role="group" aria-label="Filtrer par état de santé">
-    <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'tous'" (click)="setFiltre('tous')">
-      Tous ({{ compteurs().tous }})
-    </button>
-    <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'a_risque'" (click)="setFiltre('a_risque')">
-      À risque ({{ compteurs().a_risque }})
-    </button>
-    <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'sous_surveillance'" (click)="setFiltre('sous_surveillance')">
-      Sous surveillance ({{ compteurs().sous_surveillance }})
-    </button>
-    <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'sain'" (click)="setFiltre('sain')">
-      Sains ({{ compteurs().sain }})
-    </button>
+  <div class="portfolio__toolbar">
+    <app-search-bar placeholder="Rechercher un projet par nom…" [(value)]="recherche" />
+
+    <select class="portfolio__select" [value]="statutFiltre()" (change)="changerStatutFiltre($any($event.target).value)" aria-label="Filtrer par statut">
+      @for (s of statutsDisponibles; track s) {
+        <option [value]="s">{{ statutFiltreLabel[s] }}</option>
+      }
+    </select>
+
+    <div class="portfolio__filters" role="group" aria-label="Filtrer par état de santé">
+      <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'tous'" (click)="setFiltre('tous')">
+        Tous ({{ compteurs().tous }})
+      </button>
+      <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'a_risque'" (click)="setFiltre('a_risque')">
+        À risque ({{ compteurs().a_risque }})
+      </button>
+      <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'sous_surveillance'" (click)="setFiltre('sous_surveillance')">
+        Sous surveillance ({{ compteurs().sous_surveillance }})
+      </button>
+      <button type="button" class="portfolio__chip" [class.portfolio__chip--active]="filtre() === 'sain'" (click)="setFiltre('sain')">
+        Sains ({{ compteurs().sain }})
+      </button>
+    </div>
   </div>
 
   @if (projetsFiltres().length > 0) {
     <div class="portfolio__grid">
       @for (projet of projetsFiltres(); track projet.id) {
-        <app-project-card [project]="projet" [responsable]="responsable(projet.responsableId)" [clickable]="cartesCliquables()" />
+        <app-project-card
+          [project]="projet"
+          [responsable]="responsable(projet.responsableId)"
+          [clickable]="cartesCliquables()"
+          [showDirection]="false"
+          [statutBadge]="statutStyle[projet.statut]"
+        />
       }
     </div>
   } @else {

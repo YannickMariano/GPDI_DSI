@@ -1,15 +1,6 @@
 <div class="roles-page">
   <h1 class="roles-page__title">Rôles et habilitations</h1>
 
-  <div class="roles-page__banner">
-    <span class="roles-page__banner-icon" aria-hidden="true">◇</span>
-    <p>
-      Les 5 rôles système (Directeur DSI, Chef de projet, Membre équipe, Administrateur, Direction métier) sont fixes.
-      La matrice ci-dessous définit leurs droits par fonctionnalité : elle est persistée en base et appliquée
-      dynamiquement par le backend, en complément des rôles Keycloak qui protègent chaque module.
-    </p>
-  </div>
-
   <div class="roles-page__intro">
     <span class="roles-page__count">{{ roles.length }} rôles système · {{ matrice().length }} fonctionnalités habilitables</span>
     <span class="roles-page__hint">Cliquez sur une case de la matrice pour faire basculer le droit du rôle : Lecture → Écriture → Aucun.</span>

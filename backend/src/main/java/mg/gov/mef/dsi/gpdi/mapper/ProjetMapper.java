@@ -28,6 +28,9 @@ public interface ProjetMapper {
     @Mapping(target = "dateCreation", ignore = true)
     @Mapping(target = "responsable", ignore = true)
     @Mapping(target = "equipe", ignore = true)
+    // Le statut n'est jamais mappe ici : ProjetServiceImpl.modifier() le gere lui-meme (ne le change que
+    // si explicitement fourni), sinon MapStruct l'ecraserait avec le null habituel d'un formulaire d'edition.
+    @Mapping(target = "statut", ignore = true)
     void updateEntity(ProjetRequest request, @MappingTarget Projet projet);
 
     @Mapping(target = "idResponsable", source = "responsable.id")

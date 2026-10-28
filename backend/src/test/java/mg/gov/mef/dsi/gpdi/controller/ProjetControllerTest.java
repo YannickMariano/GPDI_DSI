@@ -212,6 +212,21 @@ class ProjetControllerTest {
     }
 
     @Test
+    void modifier_statutNonFourniDansLaRequete_neReinitialisePasLeStatutDuProjet() throws Exception {
+        Long idProjet = creerProjetEtRecupererId("Projet Omicron");
+        mockMvc.perform(post("/api/projets/{id}/demarrer", idProjet).with(utilisateurConnecte()));
+
+        ProjetRequest modification = nouvelleRequete("Projet Omicron modifié");
+
+        mockMvc.perform(put("/api/projets/{id}", idProjet)
+                .with(utilisateurConnecte())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(modification)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.statut").value("EN_COURS"));
+    }
+
+    @Test
     void cloturer_projetExistant_fixeStatutEtDateCloture() throws Exception {
         Long idProjet = creerProjetEtRecupererId("Projet Gamma");
 

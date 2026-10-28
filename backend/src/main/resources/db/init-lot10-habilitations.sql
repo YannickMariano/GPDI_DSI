@@ -126,5 +126,29 @@ INSERT INTO habilitations (module, fonction, role_nom, niveau) VALUES
     ('Espace client', 'Consultation de l''avancement partagé', 'chef_projet',      'LECTURE'),
     ('Espace client', 'Consultation de l''avancement partagé', 'membre_equipe',    'AUCUN'),
     ('Espace client', 'Consultation de l''avancement partagé', 'administrateur',   'AUCUN'),
-    ('Espace client', 'Consultation de l''avancement partagé', 'direction_metier', 'LECTURE')
+    ('Espace client', 'Consultation de l''avancement partagé', 'direction_metier', 'LECTURE'),
+
+    ('Module 1', 'Gestion des risques (IA)',                   'directeur_dsi',    'LECTURE'),
+    ('Module 1', 'Gestion des risques (IA)',                   'chef_projet',      'ECRITURE'),
+    ('Module 1', 'Gestion des risques (IA)',                   'membre_equipe',    'LECTURE'),
+    ('Module 1', 'Gestion des risques (IA)',                   'administrateur',   'AUCUN'),
+    ('Module 1', 'Gestion des risques (IA)',                   'direction_metier', 'AUCUN'),
+
+    ('Module 1', 'Recommandations de pilotage (IA)',           'directeur_dsi',    'LECTURE'),
+    ('Module 1', 'Recommandations de pilotage (IA)',           'chef_projet',      'ECRITURE'),
+    ('Module 1', 'Recommandations de pilotage (IA)',           'membre_equipe',    'AUCUN'),
+    ('Module 1', 'Recommandations de pilotage (IA)',           'administrateur',   'AUCUN'),
+    ('Module 1', 'Recommandations de pilotage (IA)',           'direction_metier', 'AUCUN'),
+
+    ('Module 1', 'Assistant IA (chat projet)',                 'directeur_dsi',    'AUCUN'),
+    ('Module 1', 'Assistant IA (chat projet)',                 'chef_projet',      'ECRITURE'),
+    ('Module 1', 'Assistant IA (chat projet)',                 'membre_equipe',    'AUCUN'),
+    ('Module 1', 'Assistant IA (chat projet)',                 'administrateur',   'AUCUN'),
+    ('Module 1', 'Assistant IA (chat projet)',                 'direction_metier', 'AUCUN'),
+
+    ('Espace client', 'Points d''information (client)',        'directeur_dsi',    'AUCUN'),
+    ('Espace client', 'Points d''information (client)',        'chef_projet',      'ECRITURE'),
+    ('Espace client', 'Points d''information (client)',        'membre_equipe',    'AUCUN'),
+    ('Espace client', 'Points d''information (client)',        'administrateur',   'AUCUN'),
+    ('Espace client', 'Points d''information (client)',        'direction_metier', 'LECTURE')
 ON CONFLICT (fonction, role_nom) DO UPDATE SET niveau = EXCLUDED.niveau, module = EXCLUDED.module;

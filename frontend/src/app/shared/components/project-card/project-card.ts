@@ -22,6 +22,10 @@ export class ProjectCard {
   readonly clickable = input<boolean>(true);
   /** N'affiche le délai avant la fin du projet (ou le retard) que lorsque la page appelante le demande explicitement. */
   readonly showJoursRestants = input<boolean>(false);
+  /** Masque le sous-titre (direction) uniquement lorsque la page appelante le demande explicitement. */
+  readonly showDirection = input<boolean>(true);
+  /** Badge de statut (En cours, Archivé…) affiché sous le titre, uniquement si fourni par la page appelante. */
+  readonly statutBadge = input<{ label: string; bg: string; text: string } | undefined>(undefined);
 
   protected readonly sante = computed(() => SANTE_CONFIG[this.project().sante]);
   /** Heures consommées arrondies à l'heure entière (pas de décimale). */

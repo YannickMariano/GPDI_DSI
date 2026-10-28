@@ -371,8 +371,8 @@ export class ReportsPage {
       periode: `Cumul projet · ${lignesAgents.length} agent(s)`,
       pages: 'page 1 / 1',
       chiffres: [
-        kpi('Heures saisies', heures(heuresSaisies), 'cumul projet', 'neutre'),
-        kpi('Heures prévues', heures(heuresPrevues), 'estimations validées', 'neutre'),
+        kpi('Durée saisies', heures(heuresSaisies), 'cumul projet', 'neutre'),
+        kpi('Durée prévues', heures(heuresPrevues), 'estimations validées', 'neutre'),
         kpi('Écart', heuresSignees(ecart), ecart > 0 ? 'au-delà du prévu' : 'dans le prévu', ecart > 0 ? 'alerte' : 'succes'),
         kpi('Tâches en dépassement', `${depassements.length}`, `sur ${taches.length} tâches`, depassements.length > 0 ? 'alerte' : 'succes'),
       ],

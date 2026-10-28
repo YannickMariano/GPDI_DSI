@@ -191,10 +191,56 @@ public class KeycloakAdminClient {
                     url, HttpMethod.GET, new HttpEntity<>(enteteAvecJeton(jeton)),
                     new ParameterizedTypeReference<List<Map<String, Object>>>() { });
             List<Map<String, Object>> resultats = reponse.getBody();
-            return resultats == null ? Collections.emptyList() : resultats;
+            if (resultats == null) {
+                return Collections.emptyList();
+            }
+            completerMatriculesManquants(resultats, jeton);
+            return resultats;
         } catch (RestClientException e) {
             log.warn("Echec de la lecture du journal des connexions Keycloak : {}", e.getMessage());
             return Collections.emptyList();
+        }
+    }
+
+    /**
+     * Les evenements LOGOUT de Keycloak ne portent pas details.username, seulement userId : le matricule
+     * est alors recherche par identifiant Keycloak (une seule requete par utilisateur distinct), pour que
+     * le journal puisse afficher le nom de l'agent. En cas d'echec, l'evenement reste inchange.
+     */
+    @SuppressWarnings("unchecked")
+    private void completerMatriculesManquants(List<Map<String, Object>> evenements, String jeton) {
+        Map<String, String> matriculesParId = new HashMap<>();
+        for (Map<String, Object> evenement : evenements) {
+            Map<String, Object> details = (Map<String, Object>) evenement.get("details");
+            boolean matriculeConnu = details != null && details.get("username") != null;
+            Object userId = evenement.get("userId");
+            if (matriculeConnu || userId == null) {
+                continue;
+            }
+            String idUtilisateur = String.valueOf(userId);
+            if (!matriculesParId.containsKey(idUtilisateur)) {
+                matriculesParId.put(idUtilisateur, rechercherMatriculeParId(idUtilisateur, jeton));
+            }
+            String matricule = matriculesParId.get(idUtilisateur);
+            if (matricule != null) {
+                Map<String, Object> detailsCompletes = details == null ? new HashMap<>() : new HashMap<>(details);
+                detailsCompletes.put("username", matricule);
+                evenement.put("details", detailsCompletes);
+            }
+        }
+    }
+
+    private String rechercherMatriculeParId(String idUtilisateur, String jeton) {
+        try {
+            ResponseEntity<Map<String, Object>> reponse = restTemplate.exchange(
+                    baseUrl + "/admin/realms/" + realm + "/users/" + idUtilisateur,
+                    HttpMethod.GET, new HttpEntity<>(enteteAvecJeton(jeton)),
+                    new ParameterizedTypeReference<Map<String, Object>>() { });
+            Map<String, Object> utilisateur = reponse.getBody();
+            return utilisateur == null || utilisateur.get("username") == null ? null : String.valueOf(utilisateur.get("username"));
+        } catch (RestClientException e) {
+            log.warn("Matricule introuvable pour l'utilisateur Keycloak {} : {}", idUtilisateur, e.getMessage());
+            return null;
         }
     }
 

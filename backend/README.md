@@ -175,7 +175,7 @@ listes. Un jeton JWT Keycloak valide est requis partout (401 sans jeton, 403 ave
 `GET` — matrice complète, regroupée par fonction : `[{ module, fonction, acces: { <roleNom>: "ecriture"|"lecture"|"aucun" } }]`.
 `PUT` (body : liste des cases modifiées `[{ fonction, roleNom, niveau }]`) — met à jour uniquement les cases
 fournies et renvoie la matrice complète à jour. `roleNom` doit être l'une des 5 valeurs de rôle métier
-existantes (`400` sinon) et `fonction` doit déjà exister dans la matrice (les 18 fonctions sont fixes, créées
+existantes (`400` sinon) et `fonction` doit déjà exister dans la matrice (les 22 fonctions sont fixes, créées
 par le script d'initialisation — voir Base de données) : cet endpoint édite des droits, il ne crée pas de
 nouvelle fonction ni de nouveau rôle. Voir section Sécurité pour la façon dont cette matrice est appliquée.
 
