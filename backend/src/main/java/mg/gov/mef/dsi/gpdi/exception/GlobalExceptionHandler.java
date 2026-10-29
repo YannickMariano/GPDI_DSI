@@ -262,6 +262,12 @@ public class GlobalExceptionHandler {
                         .body(new ErreurResponse(exception.getMessage()));
         }
 
+        @ExceptionHandler(AccesAssistantIaGlobalRefuseException.class)
+        public ResponseEntity<ErreurResponse> gererAccesAssistantIaGlobalRefuse(AccesAssistantIaGlobalRefuseException exception) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
         @ExceptionHandler(AccesProjetRefuseException.class)
         public ResponseEntity<ErreurResponse> gererAccesProjetRefuse(AccesProjetRefuseException exception) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)

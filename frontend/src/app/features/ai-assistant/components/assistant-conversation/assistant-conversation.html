@@ -1,0 +1,55 @@
+@if (aDesProjets()) {
+  <div class="ai-chat__messages" #filMessages>
+    @for (m of messages(); track m.id) {
+      <div class="ai-chat__message" [class.ai-chat__message--user]="m.isUser">
+        <div class="ai-chat__bubble">{{ m.texte }}</div>
+        @if (m.source) {
+          <span class="ai-chat__source">{{ m.source }}</span>
+        }
+      </div>
+    } @empty {
+      @if (!enCours()) {
+        <p class="ai-chat__intro">Posez une question sur l'ensemble de vos projets, ou sur un projet en le nommant.</p>
+      }
+    }
+    @if (enCours()) {
+      <div class="ai-chat__message" role="status" aria-live="polite">
+        <div class="ai-chat__bubble ai-chat__bubble--pending ai-thinking">
+          <span class="ai-thinking__dots" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span class="ai-thinking__text">
+            <span class="ai-thinking__title">L'assistant réfléchit</span>
+            <span class="ai-thinking__step">{{ etape() }} · {{ secondes() }} s</span>
+          </span>
+        </div>
+      </div>
+    } @else if (erreur(); as texteErreur) {
+      <div class="ai-chat__message" role="alert">
+        <div class="ai-chat__bubble ai-chat__bubble--error">{{ texteErreur }}</div>
+      </div>
+    }
+  </div>
+
+  <div class="ai-chat__prompts">
+    @for (p of promptsSuggeres; track p) {
+      <button type="button" class="ai-chat__prompt-chip" [disabled]="enCours()" (click)="envoyerPrompt(p)">{{ p }}</button>
+    }
+  </div>
+
+  <div class="ai-chat__input-row">
+    <label [for]="inputId" class="sr-only">Écrire à l'assistant</label>
+    <input
+      #champSaisie
+      [id]="inputId"
+      type="text"
+      class="ai-chat__input"
+      placeholder="Écrire à l'assistant…"
+      [disabled]="enCours()"
+      [value]="saisie()"
+      (input)="saisie.set($any($event.target).value)"
+      (keydown.enter)="envoyer()"
+    />
+    <button type="button" class="ai-chat__send" [disabled]="enCours()" (click)="envoyer()">Envoyer</button>
+  </div>
+} @else {
+  <app-empty-state icon="✦" title="Aucun projet géré" description="L'assistant IA est disponible dès que vous êtes responsable d'un projet." />
+}

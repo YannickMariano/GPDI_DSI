@@ -64,6 +64,9 @@ public class SecurityConfig {
                 // Meme role que le reste de la gestion de projet ; le perimetre (chef de projet du
                 // projet precis) est en plus verifie dans AssistantIaServiceImpl.
                 .antMatchers("/api/projets/*/assistant/**").hasRole("GESTIONNAIRE_PROJET")
+                // Assistant IA sur tous les projets du chef de projet connecte ; le role metier (chef_projet)
+                // est en plus verifie dans AssistantIaServiceImpl.
+                .antMatchers("/api/assistant/**").hasRole("GESTIONNAIRE_PROJET")
                 // Lecture seule ouverte aussi a GESTIONNAIRE_PARTAGE (Directeur DSI, vue portefeuille) ;
                 // generer/appliquer/rejeter restent reserves a GESTIONNAIRE_PROJET, via le matcher suivant.
                 // Le perimetre exact (chef de projet, ou Directeur DSI en lecture) est verifie dans

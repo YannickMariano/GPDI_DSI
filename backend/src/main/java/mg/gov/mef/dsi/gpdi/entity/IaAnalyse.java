@@ -44,7 +44,8 @@ public class IaAnalyse {
     @Column(name = "id_analyse")
     private Long id;
 
-    @ManyToOne(optional = false)
+    /** Absent pour un echange de portee GLOBAL (assistant IA sur tous les projets du demandeur). */
+    @ManyToOne
     @JoinColumn(name = "id_projet")
     private Projet projet;
 

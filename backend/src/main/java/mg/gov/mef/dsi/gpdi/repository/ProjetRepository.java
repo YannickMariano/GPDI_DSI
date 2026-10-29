@@ -12,4 +12,6 @@ public interface ProjetRepository extends JpaRepository<Projet, Long> {
     List<Projet> findByStatutAndDateDebutLessThanEqual(StatutProjet statut, LocalDate dateDebut);
 
     boolean existsByEquipeId(Long idEquipe);
+
+    List<Projet> findByResponsableIdOrderByIdAsc(Long idResponsable);
 }

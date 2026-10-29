@@ -283,6 +283,43 @@ class ContexteProjetServiceImplTest {
         assertThat(projetIa.get("progressionPourcent").asInt()).isEqualTo(40);
     }
 
+    @Test
+    void construirePortefeuille_detailleLesProjetsActifsEtResumeLesProjetsClotures() {
+        Projet cloture = new Projet();
+        cloture.setId(2L);
+        cloture.setTitre("Ancien portail");
+        cloture.setStatut(StatutProjet.CLOTURE);
+        cloture.setResponsable(responsable);
+
+        Sprint sprintCloture = new Sprint();
+        sprintCloture.setId(5L);
+        sprintCloture.setNom("Sprint 1");
+        sprintCloture.setStatut(StatutSprint.CLOTURER);
+
+        when(projetRepository.findAllById(Arrays.asList(2L, ID_PROJET))).thenReturn(Arrays.asList(cloture, projet));
+        when(projetRepository.findById(2L)).thenReturn(java.util.Optional.of(cloture));
+        when(risqueRepository.findByProjetIdOrderByIdAsc(2L)).thenReturn(Collections.<Risque>emptyList());
+        when(sprintRepository.findByProjetId(ID_PROJET)).thenReturn(Collections.singletonList(sprintCloture));
+        when(risqueRepository.findByProjetIdOrderByIdAsc(ID_PROJET)).thenReturn(Arrays.asList(
+                risque(10L, "Retard fournisseur", StatutRisque.OUVERT),
+                risque(11L, "Risque écarté", StatutRisque.REJETE)));
+
+        JsonNode racine = service.construirePortefeuille(Arrays.asList(2L, ID_PROJET));
+
+        assertThat(racine.get("nombreProjets").asInt()).isEqualTo(2);
+        JsonNode actif = racine.get("projets").get(0);
+        assertThat(actif.get("projet").get("titre").asText()).isEqualTo("Refonte du SI budgétaire");
+        assertThat(actif.get("equipe")).hasSize(3);
+        assertThat(actif.get("sprints")).isEmpty();
+        assertThat(actif.get("risquesActifs")).hasSize(1);
+        assertThat(actif.get("risquesActifs").get(0).get("libelle").asText()).isEqualTo("Retard fournisseur");
+
+        JsonNode resume = racine.get("projets").get(1);
+        assertThat(resume.get("projet").get("titre").asText()).isEqualTo("Ancien portail");
+        assertThat(resume.has("equipe")).isFalse();
+        assertThat(resume.has("taches")).isFalse();
+    }
+
     private Utilisateur utilisateur(Long id, String nom, String prenom) {
         Utilisateur utilisateur = new Utilisateur();
         utilisateur.setId(id);

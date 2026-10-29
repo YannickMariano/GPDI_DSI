@@ -306,6 +306,18 @@ dateCreation }]`.
 `{ id, question, reponse, fondement, dateCreation }` (`fondement` : justification de la réponse par le
 modèle). Erreurs : `404` projet introuvable ; `503` Ollama indisponible ; `502` réponse de l'IA inexploitable.
 
+### Assistant IA global — `/api/assistant/messages`
+
+Même principe que l'assistant d'un projet, mais sur **tous les projets dont l'utilisateur connecté est responsable**
+(sans choix de projet : onglet Assistant IA et bulle de discussion du frontend). Rôle Keycloak `GESTIONNAIRE_PROJET` ;
+le rôle métier `chef_projet` est en plus vérifié dans `AssistantIaServiceImpl` (`403`,
+`AccesAssistantIaGlobalRefuseException`, sinon). Le contexte envoyé au modèle est une version condensée du contexte
+projet (`ContexteProjetService.construirePortefeuille`) : projets actifs détaillés (6 au plus), projets clôturés ou
+archivés réduits à leur fiche. Échange enregistré dans `ia_analyses` avec la portée `GLOBAL` et sans projet
+(script `init-lot14-assistant-ia-global.sql`).
+`GET` — historique des échanges globaux de l'utilisateur connecté, du plus ancien au plus récent.
+`POST` (body `{ question }`, peut durer plusieurs minutes) — mêmes réponse et erreurs que l'assistant d'un projet.
+
 ### Recommandations de pilotage — `/api/projets/{idProjet}/recommandations`
 
 Lecture ouverte au chef de projet du projet et, en lecture seule, au Directeur DSI (vue portefeuille) ;
@@ -402,7 +414,7 @@ Ces types doivent exister dans la base réelle (créés manuellement, `ddl-auto=
 - `type_lien` : `DEBUT_DEBUT`, `DEBUT_FIN`, `FIN_DEBUT`, `FIN_FIN`
 - `statut_partage` : `ACTIF`, `REVOQUE`, `EXPIRE`
 - `type_analyse_ia` : `ANALYSE_PROJET`, `PLANIFICATION_SPRINT`, `CHARGE_EQUIPE`, `DETECTION_RISQUE`, `SUGGESTION_RISQUE`, `SYNTHESE`
-- `portee_analyse_ia` : `PROJET`, `SPRINT`, `EQUIPE`
+- `portee_analyse_ia` : `PROJET`, `SPRINT`, `EQUIPE`, `GLOBAL`
 - `statut_recommandation` : `PROPOSEE`, `APPLIQUEE`, `REJETEE`
 - `niveau_risque` : `FAIBLE`, `MOYEN`, `ELEVE`, `CRITIQUE`
 - `statut_risque` : `OUVERT`, `SOUS_CONTROLE`, `REJETE`, `CLOS`
