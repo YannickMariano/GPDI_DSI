@@ -221,6 +221,16 @@ Validation : `date_livraison` ne peut pas dépasser la `date_echeance` du jalon.
 optionnel. `statut` optionnel sur `PUT` (absent = conserve le statut courant ; permet de déplacer une tâche
 entre sprints sans modifier son statut). Assignation limitée aux membres de l'équipe du projet.
 
+`POST /{id}/archiver` — archive une tâche `TERMINEE` (`archivee = true`, fixe `date_archivage`) ; `409`
+(`ArchivageTacheImpossibleException`) si elle n'est pas terminée ou déjà archivée. Même droit que la modification
+des champs généraux d'une tâche (fonction « Création des tâches » de la matrice). La tâche reste renvoyée par la
+liste (`archivee`, `dateArchivage`) : c'est le Kanban qui la masque et l'affiche dans ses archives. Colonnes
+ajoutées par `init-lot15-archivage-taches.sql`.
+`POST /{id}/restaurer` — désarchive la tâche (statut `TERMINEE` conservé) ; `409`
+(`RestaurationTacheImpossibleException`) si elle n'est pas archivée. Même droit que l'archivage.
+Tant qu'une tâche est archivée, son statut ne peut pas changer : un `PUT` avec un autre statut répond `409`
+(`StatutTacheArchiveeException`). La suppression définitive reste le `DELETE /{id}` habituel.
+
 **Suivi du temps** : le passage du `statut` à `EN_COURS` démarre automatiquement le chronomètre
 (`demarree_le`, horodatage) s'il n'était pas déjà lancé ; le passage à `TERMINEE` fige le temps écoulé dans
 `temps_passe` (heures), arrête le chronomètre et fixe `date_fin_reelle`. Les autres transitions de statut

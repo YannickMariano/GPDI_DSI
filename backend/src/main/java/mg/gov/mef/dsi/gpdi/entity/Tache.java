@@ -69,6 +69,11 @@ public class Tache {
     /** Vrai si la tâche a été terminée après la date de fin de son sprint (la clôture reste permise, elle est seulement signalée). */
     private boolean depasseSprint;
 
+    /** Tâche terminée retirée du Kanban et consultable dans les archives du projet. */
+    private boolean archivee;
+
+    private LocalDateTime dateArchivage;
+
     @ManyToOne
     @JoinColumn(name = "id_sprint")
     private Sprint sprint;

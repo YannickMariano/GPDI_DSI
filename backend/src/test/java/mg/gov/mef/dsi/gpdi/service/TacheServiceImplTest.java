@@ -13,7 +13,10 @@ import mg.gov.mef.dsi.gpdi.entity.Tache;
 import mg.gov.mef.dsi.gpdi.entity.TachePrecedence;
 import mg.gov.mef.dsi.gpdi.entity.TypeLien;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
+import mg.gov.mef.dsi.gpdi.exception.ArchivageTacheImpossibleException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
+import mg.gov.mef.dsi.gpdi.exception.RestaurationTacheImpossibleException;
+import mg.gov.mef.dsi.gpdi.exception.StatutTacheArchiveeException;
 import mg.gov.mef.dsi.gpdi.exception.SprintProjetIncoherentException;
 import mg.gov.mef.dsi.gpdi.exception.TacheIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.TachePrecedenceInvalideException;
@@ -248,6 +251,89 @@ class TacheServiceImplTest {
 
         assertThatThrownBy(() -> service.obtenir(1L, 10L))
                 .isInstanceOf(TacheIntrouvableException.class);
+    }
+
+    @Test
+    void archiver_tacheTerminee_marqueLaTacheArchiveeAvecSaDate() {
+        Tache tache = tacheDuProjet(StatutTache.TERMINEE);
+        when(tacheRepository.save(tache)).thenReturn(tache);
+        when(tacheMapper.toResponse(tache)).thenReturn(new TacheResponse());
+        when(affectationTacheRepository.findByTacheId(10L)).thenReturn(Collections.<AffectationTache>emptyList());
+
+        service.archiver(1L, 10L);
+
+        assertThat(tache.isArchivee()).isTrue();
+        assertThat(tache.getDateArchivage()).isNotNull();
+        verify(habilitationService).verifierEcriture("Création des tâches");
+    }
+
+    @Test
+    void archiver_tacheNonTerminee_leveArchivageTacheImpossibleExceptionSansEnregistrer() {
+        Tache tache = tacheDuProjet(StatutTache.EN_COURS);
+
+        assertThatThrownBy(() -> service.archiver(1L, 10L)).isInstanceOf(ArchivageTacheImpossibleException.class);
+
+        assertThat(tache.isArchivee()).isFalse();
+        verify(tacheRepository, never()).save(any(Tache.class));
+    }
+
+    @Test
+    void archiver_tacheDejaArchivee_leveArchivageTacheImpossibleException() {
+        Tache tache = tacheDuProjet(StatutTache.TERMINEE);
+        tache.setArchivee(true);
+
+        assertThatThrownBy(() -> service.archiver(1L, 10L)).isInstanceOf(ArchivageTacheImpossibleException.class);
+
+        verify(tacheRepository, never()).save(any(Tache.class));
+    }
+
+    @Test
+    void restaurer_tacheArchivee_laRetireDesArchivesEnGardantSonStatut() {
+        Tache tache = tacheDuProjet(StatutTache.TERMINEE);
+        tache.setArchivee(true);
+        tache.setDateArchivage(java.time.LocalDateTime.now());
+        when(tacheRepository.save(tache)).thenReturn(tache);
+        when(tacheMapper.toResponse(tache)).thenReturn(new TacheResponse());
+        when(affectationTacheRepository.findByTacheId(10L)).thenReturn(Collections.<AffectationTache>emptyList());
+
+        service.restaurer(1L, 10L);
+
+        assertThat(tache.isArchivee()).isFalse();
+        assertThat(tache.getDateArchivage()).isNull();
+        assertThat(tache.getStatut()).isEqualTo(StatutTache.TERMINEE);
+    }
+
+    @Test
+    void restaurer_tacheNonArchivee_leveRestaurationTacheImpossibleException() {
+        tacheDuProjet(StatutTache.TERMINEE);
+
+        assertThatThrownBy(() -> service.restaurer(1L, 10L)).isInstanceOf(RestaurationTacheImpossibleException.class);
+
+        verify(tacheRepository, never()).save(any(Tache.class));
+    }
+
+    @Test
+    void modifier_changementDeStatutDUneTacheArchivee_leveStatutTacheArchiveeException() {
+        Tache tache = tacheDuProjet(StatutTache.TERMINEE);
+        tache.setArchivee(true);
+        TacheRequest request = requeteValide();
+        request.setStatut(StatutTache.EN_COURS);
+
+        assertThatThrownBy(() -> service.modifier(1L, 10L, request)).isInstanceOf(StatutTacheArchiveeException.class);
+
+        verify(tacheRepository, never()).save(any(Tache.class));
+    }
+
+    private Tache tacheDuProjet(StatutTache statut) {
+        Projet projet = new Projet();
+        projet.setId(1L);
+        Tache tache = new Tache();
+        tache.setId(10L);
+        tache.setCode("T-10");
+        tache.setStatut(statut);
+        tache.setProjet(projet);
+        when(tacheRepository.findById(10L)).thenReturn(Optional.of(tache));
+        return tache;
     }
 
     @Test

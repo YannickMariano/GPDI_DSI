@@ -37,6 +37,10 @@ public class TacheResponse {
 
     private boolean depasseSprint;
 
+    private boolean archivee;
+
+    private LocalDateTime dateArchivage;
+
     private Long idSprint;
 
     private String nomSprint;

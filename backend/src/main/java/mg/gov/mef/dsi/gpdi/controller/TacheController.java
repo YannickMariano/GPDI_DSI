@@ -61,6 +61,18 @@ public class TacheController {
         return ResponseEntity.ok(tacheService.modifier(idProjet, id, request));
     }
 
+    @PostMapping("/{id}/archiver")
+    @Operation(summary = "Archiver une tache terminee (retiree du Kanban, consultable dans les archives du projet)")
+    public ResponseEntity<TacheResponse> archiver(@PathVariable Long idProjet, @PathVariable Long id) {
+        return ResponseEntity.ok(tacheService.archiver(idProjet, id));
+    }
+
+    @PostMapping("/{id}/restaurer")
+    @Operation(summary = "Restaurer une tache archivee (elle revient dans le Kanban)")
+    public ResponseEntity<TacheResponse> restaurer(@PathVariable Long idProjet, @PathVariable Long id) {
+        return ResponseEntity.ok(tacheService.restaurer(idProjet, id));
+    }
+
     @DeleteMapping("/{id}")
     @Operation(summary = "Supprimer une tache")
     public ResponseEntity<Void> supprimer(@PathVariable Long idProjet, @PathVariable Long id) {

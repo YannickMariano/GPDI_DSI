@@ -184,6 +184,24 @@ public class GlobalExceptionHandler {
                         .body(new ErreurResponse(exception.getMessage()));
         }
 
+        @ExceptionHandler(ArchivageTacheImpossibleException.class)
+        public ResponseEntity<ErreurResponse> gererArchivageTacheImpossible(ArchivageTacheImpossibleException exception) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
+        @ExceptionHandler(RestaurationTacheImpossibleException.class)
+        public ResponseEntity<ErreurResponse> gererRestaurationTacheImpossible(RestaurationTacheImpossibleException exception) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
+        @ExceptionHandler(StatutTacheArchiveeException.class)
+        public ResponseEntity<ErreurResponse> gererStatutTacheArchivee(StatutTacheArchiveeException exception) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
         @ExceptionHandler(SousTacheIntrouvableException.class)
         public ResponseEntity<ErreurResponse> gererSousTacheIntrouvable(SousTacheIntrouvableException exception) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)

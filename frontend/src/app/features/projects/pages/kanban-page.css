@@ -133,6 +133,137 @@
   line-height: 1.5;
 }
 
+.kanban__archive-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.kanban__archive-wrapper {
+  overflow-x: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+.kanban__archive-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.kanban__archive-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--color-text-tertiary);
+  background: var(--color-surface-muted);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.kanban__archive-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-surface-alt);
+  color: var(--color-text-secondary);
+  vertical-align: middle;
+}
+
+.kanban__archive-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.kanban__archive-table tbody tr:hover {
+  background: var(--color-surface-muted);
+}
+
+.kanban__archive-code,
+.kanban__archive-mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.kanban__archive-link {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.kanban__archive-link:hover {
+  color: var(--color-action);
+  text-decoration: underline;
+}
+
+.kanban__archive-sprint {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--color-surface-alt);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.kanban__archive-actions-col {
+  text-align: right;
+}
+
+.kanban__archive-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.kanban__archive-btn {
+  padding: 5px 10px;
+  margin-left: 6px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.kanban__archive-btn:hover:not(:disabled) {
+  border-color: var(--color-action);
+  background: var(--color-action-bg);
+  color: var(--color-action);
+}
+
+.kanban__archive-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.kanban__archive-btn--danger:hover:not(:disabled) {
+  border-color: var(--color-error);
+  background: var(--color-error-bg);
+  color: var(--color-error);
+}
+
+.kanban__archive-empty {
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
 .task-modal__assignees {
   display: flex;
   flex-wrap: wrap;

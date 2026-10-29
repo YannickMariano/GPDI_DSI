@@ -28,6 +28,8 @@ public interface TacheMapper {
     @Mapping(target = "tempsPasse", ignore = true)
     @Mapping(target = "sprint", ignore = true)
     @Mapping(target = "projet", ignore = true)
+    @Mapping(target = "archivee", ignore = true)
+    @Mapping(target = "dateArchivage", ignore = true)
     Tache toEntity(TacheRequest request);
 
     @Mapping(target = "id", ignore = true)
@@ -39,6 +41,8 @@ public interface TacheMapper {
     @Mapping(target = "tempsPasse", ignore = true)
     @Mapping(target = "sprint", ignore = true)
     @Mapping(target = "projet", ignore = true)
+    @Mapping(target = "archivee", ignore = true)
+    @Mapping(target = "dateArchivage", ignore = true)
     void updateEntity(TacheRequest request, @MappingTarget Tache tache);
 
     @Mapping(target = "dateEcheance", source = "dateFinPrevue")

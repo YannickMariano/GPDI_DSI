@@ -24,6 +24,8 @@ interface TacheResponseDto {
   tempsPasse: number | null;
   demarreeLe: string | null;
   depasseSprint: boolean;
+  archivee?: boolean;
+  dateArchivage?: string | null;
   idSprint: number | null;
   idProjet: number;
   assignations: UtilisateurAssigneDto[];
@@ -126,6 +128,8 @@ function versTask(dto: TacheResponseDto, existant?: Task): Task {
     tempsPasseHeures: dto.tempsPasse ?? 0,
     demarreeLe: dto.demarreeLe ?? undefined,
     depasseSprint: dto.depasseSprint ?? false,
+    archivee: dto.archivee ?? false,
+    dateArchivage: dto.dateArchivage ?? undefined,
     complexite: existant?.complexite ?? 3,
     iaComplexiteSuggeree: existant?.iaComplexiteSuggeree,
     iaConfiance: existant?.iaConfiance,
@@ -337,6 +341,22 @@ export class TasksService {
     await firstValueFrom(this.http.delete<void>(`${environment.apiUrl}/projets/${tache.projectId}/taches/${taskId}`));
     this._tasks.update((list) => list.filter((t) => t.id !== taskId));
     this._dependances.update((list) => list.filter((d) => d.idTacheSource !== taskId && d.idTacheCible !== taskId));
+  }
+
+  /** Archive une tâche terminée (refusé par le backend sinon) : elle quitte le Kanban, ses données restent intactes. */
+  async archiver(taskId: string): Promise<void> {
+    const tache = this._tasks().find((t) => t.id === taskId);
+    if (!tache) return;
+    const dto = await firstValueFrom(this.http.post<TacheResponseDto>(`${environment.apiUrl}/projets/${tache.projectId}/taches/${taskId}/archiver`, {}));
+    this._tasks.update((list) => list.map((t) => (t.id === taskId ? versTask(dto, t) : t)));
+  }
+
+  /** Désarchive une tâche : elle revient dans le Kanban (colonne « Terminée »). */
+  async restaurer(taskId: string): Promise<void> {
+    const tache = this._tasks().find((t) => t.id === taskId);
+    if (!tache) return;
+    const dto = await firstValueFrom(this.http.post<TacheResponseDto>(`${environment.apiUrl}/projets/${tache.projectId}/taches/${taskId}/restaurer`, {}));
+    this._tasks.update((list) => list.map((t) => (t.id === taskId ? versTask(dto, t) : t)));
   }
 
   async removeSousTache(taskId: string, sousTacheId: string): Promise<void> {

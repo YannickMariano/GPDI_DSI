@@ -52,6 +52,10 @@
   padding-right: 44px;
 }
 
+.task-card__top--with-archive {
+  padding-right: 66px;
+}
+
 .task-card__quick-actions {
   position: absolute;
   top: 10px;

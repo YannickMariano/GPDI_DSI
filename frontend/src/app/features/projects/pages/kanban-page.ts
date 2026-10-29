@@ -13,11 +13,13 @@ import { TaskDetailPanel } from '@shared/components/task-detail-panel/task-detai
 import { Modal } from '@shared/components/modal/modal';
 import { ConfirmationDialog } from '@shared/components/confirmation-dialog/confirmation-dialog';
 import { ToastService } from '@shared/components/toast/toast.service';
+import { PriorityBadge } from '@shared/components/priority-badge/priority-badge';
+import { formatDateFr } from '@shared/utils/format.util';
 
 @Component({
   selector: 'app-kanban-page',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [TaskCard, TaskDetailPanel, Modal, ConfirmationDialog, ReactiveFormsModule],
+  imports: [TaskCard, TaskDetailPanel, Modal, ConfirmationDialog, ReactiveFormsModule, PriorityBadge],
   templateUrl: './kanban-page.html',
   styleUrl: './kanban-page.css',
 })
@@ -49,9 +51,78 @@ export class KanbanPage {
     const user = this.authService.currentUser();
     const base = filtre === 'toutes' ? this.tasksService.byProject(this.projectId())() : this.tasksService.bySprint(filtre)();
     return base
+      .filter((t) => !t.archivee)
       .filter((t) => !this.assigneAMoi() || !user || t.assigneIds.includes(user.id))
       .filter((t) => this.filtrePriorite() === 'toutes' || t.priorite === this.filtrePriorite());
   });
+
+  // --- Archives : tâches terminées archivées, listées (et non en Kanban), filtrables par sprint ---
+
+  protected readonly vueArchives = signal(false);
+  /** 'toutes' = tous les sprints ensemble, 'backlog' = tâches sans sprint, sinon l'identifiant d'un sprint. */
+  protected readonly archiveSprintFiltre = signal<string>('toutes');
+  protected readonly tacheAArchiver = signal<Task | null>(null);
+
+  private readonly toutesArchivees = computed(() => this.tasksService.byProject(this.projectId())().filter((t) => t.archivee));
+  protected readonly nombreArchivees = computed(() => this.toutesArchivees().length);
+  protected readonly tachesArchivees = computed(() => {
+    const filtre = this.archiveSprintFiltre();
+    return this.toutesArchivees()
+      .filter((t) => filtre === 'toutes' || (filtre === 'backlog' ? !t.sprintId : t.sprintId === filtre))
+      .sort((a, b) => (b.dateArchivage ?? '').localeCompare(a.dateArchivage ?? ''));
+  });
+
+  protected readonly formatDateFr = formatDateFr;
+
+  nomSprint(sprintId: string | undefined): string {
+    if (!sprintId) return 'Backlog';
+    return this.sprints().find((s) => s.id === sprintId)?.nom ?? '—';
+  }
+
+  nomsAssignes(task: Task): string {
+    const noms = task.assigneIds.map((id) => this.peopleService.byId(id)?.nom).filter((nom) => !!nom);
+    return noms.length > 0 ? noms.join(', ') : '—';
+  }
+
+  afficherArchives(afficher: boolean): void {
+    this.vueArchives.set(afficher);
+  }
+
+  protected readonly restaurationEnCours = signal<string | null>(null);
+
+  async restaurer(task: Task): Promise<void> {
+    this.restaurationEnCours.set(task.id);
+    try {
+      await this.tasksService.restaurer(task.id);
+      this.toast.show({ type: 'success', message: `Tâche ${task.code} restaurée dans le Kanban.` });
+    } catch {
+      // Message d'erreur déjà affiché par l'intercepteur HTTP global.
+    } finally {
+      this.restaurationEnCours.set(null);
+    }
+  }
+
+  demanderArchivage(task: Task): void {
+    this.tacheAArchiver.set(task);
+  }
+
+  annulerArchivage(): void {
+    this.tacheAArchiver.set(null);
+  }
+
+  async confirmerArchivage(): Promise<void> {
+    const task = this.tacheAArchiver();
+    if (!task) return;
+    try {
+      await this.tasksService.archiver(task.id);
+      if (this.selectedTaskId() === task.id) this.selectedTaskId.set(null);
+      this.toast.show({ type: 'success', message: `Tâche ${task.code} archivée.` });
+    } catch {
+      // Message d'erreur déjà affiché par l'intercepteur HTTP global.
+    } finally {
+      this.tacheAArchiver.set(null);
+    }
+  }
 
   protected readonly totalTaches = computed(() => this.tachesSprint().length);
   protected readonly totalBloquees = computed(() => this.tachesSprint().filter((t) => t.statut === 'bloquee').length);
