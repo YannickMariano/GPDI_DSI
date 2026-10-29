@@ -12,6 +12,18 @@
         </button>
       }
     </div>
+    @if (projetsDisponibles().length > 1) {
+      <label class="ai-page__context ai-page__context--label" for="ai-reco-project-select">
+        Projet analysé :
+        <select id="ai-reco-project-select" class="ai-page__project-select" [value]="projetId()" (change)="selectProjet($any($event.target).value)">
+          @for (p of projetsDisponibles(); track p.id) {
+            <option [value]="p.id" [selected]="p.id === projetId()">{{ p.nom }}</option>
+          }
+        </select>
+      </label>
+    } @else if (projetSelectionne(); as projet) {
+      <div class="ai-page__context">Projet analysé : {{ projet.nom }}</div>
+    }
     <p class="ai-page__governance">Aucune recommandation n'est appliquée sans validation humaine.</p>
 
     @if (analyseEnCours()) {
@@ -59,70 +71,9 @@
       <span class="ai-chat__avatar" aria-hidden="true">✦</span>
       <div class="ai-chat__header-body">
         <div class="ai-chat__name">Assistant GPDI</div>
-        @if (projetsDisponibles().length > 1) {
-          <label class="ai-chat__context ai-chat__context--label" for="ai-chat-project-select">
-            Contexte :
-            <select id="ai-chat-project-select" class="ai-chat__project-select" [value]="projetId()" (change)="selectProjet($any($event.target).value)">
-              @for (p of projetsDisponibles(); track p.id) {
-                <option [value]="p.id" [selected]="p.id === projetId()">{{ p.nom }}</option>
-              }
-            </select>
-          </label>
-        } @else {
-          <div class="ai-chat__context">Contexte : {{ projetSelectionne()?.nom ?? 'aucun projet' }}</div>
-        }
-      </div>
+       </div>
     </div>
 
-    @if (projetId()) {
-      <div class="ai-chat__messages">
-        @for (m of messages(); track m.id) {
-          <div class="ai-chat__message" [class.ai-chat__message--user]="m.isUser">
-            <div class="ai-chat__bubble">{{ m.texte }}</div>
-            @if (m.source) {
-              <span class="ai-chat__source">{{ m.source }}</span>
-            }
-          </div>
-        }
-        @if (enCours()) {
-          <div class="ai-chat__message" role="status" aria-live="polite">
-            <div class="ai-chat__bubble ai-chat__bubble--pending ai-thinking">
-              <span class="ai-thinking__dots" aria-hidden="true"><span></span><span></span><span></span></span>
-              <span class="ai-thinking__text">
-                <span class="ai-thinking__title">L'assistant réfléchit</span>
-                <span class="ai-thinking__step">{{ etapeChat() }} · {{ secondesChat() }} s</span>
-              </span>
-            </div>
-          </div>
-        } @else if (erreurChat(); as erreur) {
-          <div class="ai-chat__message" role="alert">
-            <div class="ai-chat__bubble ai-chat__bubble--error">{{ erreur }}</div>
-          </div>
-        }
-      </div>
-
-      <div class="ai-chat__prompts">
-        @for (p of promptsSuggeres; track p) {
-          <button type="button" class="ai-chat__prompt-chip" [disabled]="enCours()" (click)="envoyerPrompt(p)">{{ p }}</button>
-        }
-      </div>
-
-      <div class="ai-chat__input-row">
-        <label for="ai-chat-input" class="sr-only">Écrire à l'assistant</label>
-        <input
-          id="ai-chat-input"
-          type="text"
-          class="ai-chat__input"
-          placeholder="Écrire à l'assistant…"
-          [disabled]="enCours()"
-          [value]="saisie()"
-          (input)="saisie.set($any($event.target).value)"
-          (keydown.enter)="envoyer()"
-        />
-        <button type="button" class="ai-chat__send" [disabled]="enCours()" (click)="envoyer()">Envoyer</button>
-      </div>
-    } @else {
-      <app-empty-state icon="✦" title="Aucun projet géré" description="L'assistant IA est disponible dès que vous êtes responsable d'un projet." />
-    }
+    <app-assistant-conversation />
   </section>
 </div>

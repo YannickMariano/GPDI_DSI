@@ -1,5 +1,5 @@
 <button type="button" class="task-card__open" (click)="open.emit(task().id)">
-  <div class="task-card__top" [class.task-card__top--with-actions]="canManage()">
+  <div class="task-card__top" [class.task-card__top--with-actions]="canManage()" [class.task-card__top--with-archive]="peutArchiver()">
     <span class="task-card__code">{{ task().code }}</span>
     <app-priority-badge [priorite]="task().priorite" />
   </div>
@@ -33,6 +33,9 @@
 
 @if (canManage()) {
   <div class="task-card__quick-actions">
+    @if (peutArchiver()) {
+      <button type="button" class="task-card__icon-btn" (click)="onArchive($event)" [attr.aria-label]="'Archiver ' + task().code" title="Archiver">▤</button>
+    }
     <button type="button" class="task-card__icon-btn" (click)="onEdit($event)" [attr.aria-label]="'Modifier ' + task().code">✎</button>
     <button type="button" class="task-card__icon-btn task-card__icon-btn--danger" (click)="onDelete($event)" [attr.aria-label]="'Supprimer ' + task().code">×</button>
   </div>

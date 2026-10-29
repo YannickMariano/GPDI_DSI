@@ -13,7 +13,10 @@ import mg.gov.mef.dsi.gpdi.entity.Tache;
 import mg.gov.mef.dsi.gpdi.entity.TachePrecedence;
 import mg.gov.mef.dsi.gpdi.entity.TypeLien;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
+import mg.gov.mef.dsi.gpdi.exception.ArchivageTacheImpossibleException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
+import mg.gov.mef.dsi.gpdi.exception.RestaurationTacheImpossibleException;
+import mg.gov.mef.dsi.gpdi.exception.StatutTacheArchiveeException;
 import mg.gov.mef.dsi.gpdi.exception.SprintIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.SprintProjetIncoherentException;
 import mg.gov.mef.dsi.gpdi.exception.TacheIntrouvableException;
@@ -157,6 +160,10 @@ public class TacheServiceImpl implements TacheService {
     public TacheResponse modifier(Long idProjet, Long id, TacheRequest request) {
         Tache tache = obtenirTacheDuProjet(idProjet, id);
         accesProjetService.verifierMembreDuProjet(tache.getProjet());
+        // Une tache archivee garde son statut TERMINEE : les autres champs restent modifiables, pas le statut.
+        if (tache.isArchivee() && request.getStatut() != null && request.getStatut() != tache.getStatut()) {
+            throw new StatutTacheArchiveeException(tache.getCode());
+        }
         verifierHabilitationsChampsModifies(tache, request);
         Sprint sprint = obtenirSprintCoherent(idProjet, request.getIdSprint());
         List<Utilisateur> assignes = obtenirUtilisateursEligibles(tache.getProjet(), request.getIdsUtilisateursAssignes());
@@ -213,6 +220,49 @@ public class TacheServiceImpl implements TacheService {
         tachePrecedenceRepository.deleteByTacheSourceIdOrTacheCibleId(id, id);
         tacheRepository.delete(tache);
         log.info("Tache {} supprimee", id);
+    }
+
+    @Override
+    @Transactional
+    public TacheResponse archiver(Long idProjet, Long id) {
+        Tache tache = obtenirTacheDuProjet(idProjet, id);
+        accesProjetService.verifierMembreDuProjet(tache.getProjet());
+        habilitationService.verifierEcriture("Création des tâches");
+        if (tache.getStatut() != StatutTache.TERMINEE) {
+            throw new ArchivageTacheImpossibleException("Seule une tâche terminée peut être archivée.");
+        }
+        if (tache.isArchivee()) {
+            throw new ArchivageTacheImpossibleException("La tâche " + tache.getCode() + " est déjà archivée.");
+        }
+        tache.setArchivee(true);
+        tache.setDateArchivage(LocalDateTime.now());
+        tache = tacheRepository.save(tache);
+        log.info("Tache {} archivee", id);
+        return reponseAvecAssignations(tache);
+    }
+
+    @Override
+    @Transactional
+    public TacheResponse restaurer(Long idProjet, Long id) {
+        Tache tache = obtenirTacheDuProjet(idProjet, id);
+        accesProjetService.verifierMembreDuProjet(tache.getProjet());
+        habilitationService.verifierEcriture("Création des tâches");
+        if (!tache.isArchivee()) {
+            throw new RestaurationTacheImpossibleException(tache.getCode());
+        }
+        tache.setArchivee(false);
+        tache.setDateArchivage(null);
+        tache = tacheRepository.save(tache);
+        log.info("Tache {} restauree", id);
+        return reponseAvecAssignations(tache);
+    }
+
+    private TacheResponse reponseAvecAssignations(Tache tache) {
+        TacheResponse reponse = tacheMapper.toResponse(tache);
+        reponse.setAssignations(affectationTacheRepository.findByTacheId(tache.getId()).stream()
+                .map(tacheMapper::toAssignationResponse)
+                .collect(Collectors.toList()));
+        return reponse;
     }
 
     /**

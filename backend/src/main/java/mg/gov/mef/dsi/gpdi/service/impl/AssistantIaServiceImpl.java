@@ -11,6 +11,7 @@ import mg.gov.mef.dsi.gpdi.entity.PorteeAnalyseIa;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
 import mg.gov.mef.dsi.gpdi.entity.TypeAnalyseIa;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
+import mg.gov.mef.dsi.gpdi.exception.AccesAssistantIaGlobalRefuseException;
 import mg.gov.mef.dsi.gpdi.exception.AccesAssistantIaRefuseException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.ReponseIaInvalideException;
@@ -41,6 +42,7 @@ public class AssistantIaServiceImpl implements AssistantIaService {
 
     private static final Logger log = LoggerFactory.getLogger(AssistantIaServiceImpl.class);
     private static final int MAX_LONGUEUR_REPONSE = 4000;
+    private static final String ROLE_CHEF_PROJET = "chef_projet";
 
     private final ProjetRepository projetRepository;
     private final IaAnalyseRepository iaAnalyseRepository;
@@ -77,6 +79,64 @@ public class AssistantIaServiceImpl implements AssistantIaService {
 
         return transactionTemplate.execute(
                 statut -> enregistrer(idProjet, idDemandeur, question, reponseTexte, fondement, contexte.getContenu()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<MessageAssistantResponse> historiqueGlobal() {
+        Utilisateur chefDeProjet = obtenirChefDeProjetCourant();
+        return iaAnalyseRepository.findByDemandeurIdAndPorteeOrderByDateCreationAsc(chefDeProjet.getId(), PorteeAnalyseIa.GLOBAL)
+                .stream()
+                .map(analyse -> new MessageAssistantResponse(analyse.getId(), analyse.getQuestion(), analyse.getReponse(), null, analyse.getDateCreation()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public MessageAssistantResponse poserQuestionGlobale(String question, Long idDemandeur) {
+        Utilisateur chefDeProjet = obtenirChefDeProjetCourant();
+        List<Long> idsProjets = projetRepository.findByResponsableIdOrderByIdAsc(chefDeProjet.getId()).stream()
+                .map(Projet::getId)
+                .collect(Collectors.toList());
+
+        JsonNode contexte = contexteProjetService.construirePortefeuille(idsProjets);
+        String reponseBrute = ollamaClient.genererJson(AssistantIaConsignes.consigneSystemePortefeuille(),
+                AssistantIaConsignes.consigneUtilisateurPortefeuille(contexte, question), AssistantIaConsignes.schemaReponse());
+        JsonNode noeud = lire(reponseBrute);
+        String reponseTexte = texte(noeud.path("reponse"));
+        if (reponseTexte == null) {
+            throw new ReponseIaInvalideException("L'assistant IA n'a pas fourni de réponse exploitable.");
+        }
+        String fondement = texte(noeud.path("fondement"));
+
+        return transactionTemplate.execute(
+                statut -> enregistrerGlobal(idDemandeur, question, reponseTexte, fondement, contexte));
+    }
+
+    private MessageAssistantResponse enregistrerGlobal(Long idDemandeur, String question, String reponseTexte,
+                                                       String fondement, JsonNode contenuContexte) {
+        Utilisateur demandeur = utilisateurRepository.findById(idDemandeur).orElse(null);
+
+        IaAnalyse analyse = new IaAnalyse();
+        analyse.setDemandeur(demandeur);
+        analyse.setTypeAnalyse(TypeAnalyseIa.ANALYSE_PROJET);
+        analyse.setPortee(PorteeAnalyseIa.GLOBAL);
+        analyse.setQuestion(question);
+        analyse.setReponse(tronquer(reponseTexte, MAX_LONGUEUR_REPONSE));
+        analyse.setContexte(contenuContexte);
+        analyse.setModele(ollamaClient.getModele());
+        IaAnalyse enregistree = iaAnalyseRepository.save(analyse);
+
+        log.info("Analyse {} : question globale posee a l'assistant IA par l'utilisateur {}", enregistree.getId(), idDemandeur);
+        return new MessageAssistantResponse(enregistree.getId(), enregistree.getQuestion(), enregistree.getReponse(), fondement, enregistree.getDateCreation());
+    }
+
+    private Utilisateur obtenirChefDeProjetCourant() {
+        Utilisateur utilisateurCourant = utilisateurCourantService.obtenirUtilisateurCourant();
+        boolean estChefDeProjet = utilisateurCourant.getRole() != null && ROLE_CHEF_PROJET.equals(utilisateurCourant.getRole().getNom());
+        if (!estChefDeProjet) {
+            throw new AccesAssistantIaGlobalRefuseException();
+        }
+        return utilisateurCourant;
     }
 
     /**

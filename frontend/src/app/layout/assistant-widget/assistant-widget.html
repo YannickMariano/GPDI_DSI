@@ -1,0 +1,33 @@
+@if (visible()) {
+  @if (ouvert()) {
+    <section id="assistant-widget-panel" class="assistant-widget__panel" role="dialog" aria-modal="false" aria-labelledby="assistant-widget-title">
+      <header class="assistant-widget__header">
+        <span class="assistant-widget__avatar" aria-hidden="true">✦</span>
+        <div class="assistant-widget__header-body">
+          <h2 id="assistant-widget-title" class="assistant-widget__title">Assistant GPDI</h2>
+         </div>
+        <a class="assistant-widget__icon-btn" routerLink="/assistant-ia" aria-label="Ouvrir l'onglet Assistant IA" title="Ouvrir l'onglet Assistant IA" (click)="fermer()">⤢</a>
+        <button type="button" class="assistant-widget__icon-btn" aria-label="Fermer la discussion" title="Fermer" (click)="fermer()">×</button>
+      </header>
+      <div class="assistant-widget__body">
+        <app-assistant-conversation [compact]="true" />
+      </div>
+    </section>
+  }
+
+  <button
+    #bouton
+    type="button"
+    class="assistant-widget__launcher"
+    [class.assistant-widget__launcher--open]="ouvert()"
+    [attr.aria-expanded]="ouvert()"
+    aria-controls="assistant-widget-panel"
+    [attr.aria-label]="ouvert() ? 'Fermer l\'assistant IA' : 'Ouvrir l\'assistant IA'"
+    (click)="basculer()"
+  >
+    <span aria-hidden="true">{{ ouvert() ? '×' : '✦' }}</span>
+    @if (enCours() && !ouvert()) {
+      <span class="assistant-widget__pending" aria-hidden="true"></span>
+    }
+  </button>
+}

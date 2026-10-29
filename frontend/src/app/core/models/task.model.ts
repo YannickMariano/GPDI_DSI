@@ -53,6 +53,9 @@ export interface Task {
   demarreeLe?: string;
   /** Tâche terminée après la date de fin de son sprint (la clôture reste permise, elle est seulement signalée). */
   depasseSprint: boolean;
+  /** Tâche terminée archivée : retirée du Kanban, visible dans les archives du projet. */
+  archivee: boolean;
+  dateArchivage?: string;
   complexite: number;
   iaComplexiteSuggeree?: number;
   iaConfiance?: number;

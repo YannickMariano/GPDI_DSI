@@ -333,6 +333,54 @@ class TacheControllerTest {
     }
 
     @Test
+    void archiver_tacheNonTerminee_retourne409PuisArchiveUneFoisTerminee() throws Exception {
+        String reponse = mockMvc.perform(post("/api/projets/{idProjet}/taches", idProjet)
+                .with(utilisateurConnecte())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(nouvelleRequete("Tache a archiver", null))))
+                .andReturn().getResponse().getContentAsString();
+        Long idTache = objectMapper.readTree(reponse).get("id").asLong();
+
+        mockMvc.perform(post("/api/projets/{idProjet}/taches/{id}/archiver", idProjet, idTache).with(utilisateurConnecte()))
+                .andExpect(status().isConflict());
+
+        TacheRequest fin = nouvelleRequete("Tache a archiver", null);
+        fin.setStatut(mg.gov.mef.dsi.gpdi.entity.StatutTache.TERMINEE);
+        mockMvc.perform(put("/api/projets/{idProjet}/taches/{id}", idProjet, idTache)
+                .with(utilisateurConnecte())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(fin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.archivee").value(false));
+
+        mockMvc.perform(post("/api/projets/{idProjet}/taches/{id}/archiver", idProjet, idTache).with(utilisateurConnecte()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.archivee").value(true))
+                .andExpect(jsonPath("$.dateArchivage").exists())
+                .andExpect(jsonPath("$.statut").value("TERMINEE"));
+
+        mockMvc.perform(post("/api/projets/{idProjet}/taches/{id}/archiver", idProjet, idTache).with(utilisateurConnecte()))
+                .andExpect(status().isConflict());
+
+        TacheRequest reprise = nouvelleRequete("Tache a archiver", null);
+        reprise.setStatut(mg.gov.mef.dsi.gpdi.entity.StatutTache.EN_COURS);
+        mockMvc.perform(put("/api/projets/{idProjet}/taches/{id}", idProjet, idTache)
+                .with(utilisateurConnecte())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(reprise)))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(post("/api/projets/{idProjet}/taches/{id}/restaurer", idProjet, idTache).with(utilisateurConnecte()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.archivee").value(false))
+                .andExpect(jsonPath("$.dateArchivage").doesNotExist())
+                .andExpect(jsonPath("$.statut").value("TERMINEE"));
+
+        mockMvc.perform(post("/api/projets/{idProjet}/taches/{id}/restaurer", idProjet, idTache).with(utilisateurConnecte()))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void modifier_tempsPasseFourni_metAJourLeTempsPasse() throws Exception {
         String reponse = mockMvc.perform(post("/api/projets/{idProjet}/taches", idProjet)
                 .with(utilisateurConnecte())

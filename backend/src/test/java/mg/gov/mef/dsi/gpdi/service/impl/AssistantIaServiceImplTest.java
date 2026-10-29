@@ -8,8 +8,10 @@ import mg.gov.mef.dsi.gpdi.dto.response.MessageAssistantResponse;
 import mg.gov.mef.dsi.gpdi.entity.IaAnalyse;
 import mg.gov.mef.dsi.gpdi.entity.PorteeAnalyseIa;
 import mg.gov.mef.dsi.gpdi.entity.Projet;
+import mg.gov.mef.dsi.gpdi.entity.Role;
 import mg.gov.mef.dsi.gpdi.entity.TypeAnalyseIa;
 import mg.gov.mef.dsi.gpdi.entity.Utilisateur;
+import mg.gov.mef.dsi.gpdi.exception.AccesAssistantIaGlobalRefuseException;
 import mg.gov.mef.dsi.gpdi.exception.AccesAssistantIaRefuseException;
 import mg.gov.mef.dsi.gpdi.exception.ProjetIntrouvableException;
 import mg.gov.mef.dsi.gpdi.exception.ReponseIaInvalideException;
@@ -174,6 +176,59 @@ class AssistantIaServiceImplTest {
         assertThatThrownBy(() -> service.historique(ID_PROJET)).isInstanceOf(AccesAssistantIaRefuseException.class);
 
         verifyNoInteractions(iaAnalyseRepository);
+    }
+
+    @Test
+    void poserQuestionGlobale_chefDeProjet_envoieLeContexteDeSesProjetsEtEnregistreUnEchangeSansProjet() throws Exception {
+        responsable.setRole(role("chef_projet"));
+        Projet autreProjet = new Projet();
+        autreProjet.setId(2L);
+        when(projetRepository.findByResponsableIdOrderByIdAsc(ID_RESPONSABLE)).thenReturn(Arrays.asList(projet, autreProjet));
+        when(contexteProjetService.construirePortefeuille(Arrays.asList(ID_PROJET, 2L)))
+                .thenReturn(objectMapper.readTree("{\"nombreProjets\":2}"));
+        when(ollamaClient.genererJson(anyString(), anyString(), anyMap()))
+                .thenReturn("{\"reponse\":\"2 projets en cours.\",\"fondement\":\"2 projets\"}");
+
+        MessageAssistantResponse reponse = service.poserQuestionGlobale("Où en sont mes projets ?", ID_RESPONSABLE);
+
+        assertThat(reponse.getReponse()).isEqualTo("2 projets en cours.");
+        assertThat(reponse.getFondement()).isEqualTo("2 projets");
+        ArgumentCaptor<IaAnalyse> captor = ArgumentCaptor.forClass(IaAnalyse.class);
+        verify(iaAnalyseRepository).save(captor.capture());
+        assertThat(captor.getValue().getProjet()).isNull();
+        assertThat(captor.getValue().getPortee()).isEqualTo(PorteeAnalyseIa.GLOBAL);
+        assertThat(captor.getValue().getDemandeur()).isSameAs(responsable);
+    }
+
+    @Test
+    void poserQuestionGlobale_utilisateurNonChefDeProjet_leveAccesAssistantIaGlobalRefuseExceptionSansAppelerOllama() {
+        autre.setRole(role("membre_equipe"));
+        when(utilisateurCourantService.obtenirUtilisateurCourant()).thenReturn(autre);
+
+        assertThatThrownBy(() -> service.poserQuestionGlobale("Question", ID_AUTRE))
+                .isInstanceOf(AccesAssistantIaGlobalRefuseException.class);
+
+        verifyNoInteractions(ollamaClient);
+        verify(iaAnalyseRepository, never()).save(any(IaAnalyse.class));
+    }
+
+    @Test
+    void historiqueGlobal_chefDeProjet_retourneSesEchangesGlobaux() {
+        responsable.setRole(role("chef_projet"));
+        IaAnalyse echange = analyse(3L, "Question globale", "Reponse globale", LocalDateTime.of(2026, 9, 3, 8, 0));
+        when(iaAnalyseRepository.findByDemandeurIdAndPorteeOrderByDateCreationAsc(ID_RESPONSABLE, PorteeAnalyseIa.GLOBAL))
+                .thenReturn(Collections.singletonList(echange));
+
+        List<MessageAssistantResponse> historique = service.historiqueGlobal();
+
+        assertThat(historique).hasSize(1);
+        assertThat(historique.get(0).getQuestion()).isEqualTo("Question globale");
+    }
+
+    private Role role(String nom) {
+        Role role = new Role();
+        role.setNom(nom);
+        return role;
     }
 
     private IaAnalyse analyse(Long id, String question, String reponse, LocalDateTime dateCreation) {

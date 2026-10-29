@@ -25,10 +25,20 @@ export class TaskCard {
   readonly task = input.required<Task>();
   readonly draggable = input<boolean>(false);
   readonly canManage = input<boolean>(false);
+  /** Affiche l'action « Archiver » (avec canManage) ; elle n'apparaît que sur une tâche terminée. */
+  readonly archivable = input<boolean>(false);
   readonly open = output<string>();
   readonly dragStart = output<string>();
   readonly edit = output<string>();
   readonly delete = output<string>();
+  readonly archive = output<string>();
+
+  protected readonly peutArchiver = computed(() => this.canManage() && this.archivable() && this.task().statut === 'terminee');
+
+  onArchive(event: Event): void {
+    event.stopPropagation();
+    this.archive.emit(this.task().id);
+  }
 
   onEdit(event: Event): void {
     event.stopPropagation();

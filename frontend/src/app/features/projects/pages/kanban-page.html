@@ -1,4 +1,64 @@
 <div class="kanban">
+  @if (vueArchives()) {
+  <div class="kanban__toolbar">
+    <button type="button" class="kanban__filter-chip" (click)="afficherArchives(false)">← Retour au Kanban</button>
+    <h2 class="kanban__archive-title">Archives du projet</h2>
+    <select class="kanban__select" [value]="archiveSprintFiltre()" (change)="archiveSprintFiltre.set($any($event.target).value)" aria-label="Filtrer les archives par sprint">
+      <option value="toutes">Tous les sprints</option>
+      @for (sprint of sprints(); track sprint.id) {
+        <option [value]="sprint.id">{{ sprint.nom }}</option>
+      }
+      <option value="backlog">Backlog (aucun sprint)</option>
+    </select>
+    <span class="kanban__count"><strong>{{ tachesArchivees().length }}</strong> tâche(s) archivée(s)</span>
+  </div>
+
+  @if (tachesArchivees().length > 0) {
+    <div class="kanban__archive-wrapper">
+      <table class="kanban__archive-table">
+        <thead>
+          <tr>
+            <th scope="col">Code</th>
+            <th scope="col">Tâche</th>
+            <th scope="col">Sprint</th>
+            <th scope="col">Priorité</th>
+            <th scope="col">Assignés</th>
+            <th scope="col">Temps passé</th>
+            <th scope="col">Archivée le</th>
+            @if (peutGererTaches()) {
+              <th scope="col" class="kanban__archive-actions-col">Actions</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (task of tachesArchivees(); track task.id) {
+            <tr>
+              <td class="kanban__archive-code">{{ task.code }}</td>
+              <td>
+                <button type="button" class="kanban__archive-link" (click)="openTask(task.id)">{{ task.titre }}</button>
+              </td>
+              <td><span class="kanban__archive-sprint">{{ nomSprint(task.sprintId) }}</span></td>
+              <td><app-priority-badge [priorite]="task.priorite" /></td>
+              <td>{{ nomsAssignes(task) }}</td>
+              <td class="kanban__archive-mono">{{ task.tempsPasseHeures }} h / {{ task.estimeHeures }} h</td>
+              <td class="kanban__archive-mono">{{ formatDateFr(task.dateArchivage) }}</td>
+              @if (peutGererTaches()) {
+                <td class="kanban__archive-actions">
+                  <button type="button" class="kanban__archive-btn" [disabled]="restaurationEnCours() === task.id" (click)="restaurer(task)" [attr.aria-label]="'Restaurer ' + task.code">Restaurer</button>
+                  <button type="button" class="kanban__archive-btn kanban__archive-btn--danger" (click)="demanderSuppressionTache(task)" [attr.aria-label]="'Supprimer définitivement ' + task.code">Supprimer</button>
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <div class="kanban__archive-empty">
+      {{ nombreArchivees() === 0 ? 'Aucune tâche archivée pour ce projet.' : 'Aucune tâche archivée pour ce sprint.' }}
+    </div>
+  }
+  } @else {
   <div class="kanban__toolbar">
     <div class="kanban__filters">
       @if (assigneAMoi()) {
@@ -32,6 +92,10 @@
       }
     </span>
 
+    <button type="button" class="kanban__filter-chip" (click)="afficherArchives(true)">
+      <span aria-hidden="true">▤</span> Archives ({{ nombreArchivees() }})
+    </button>
+
     @if (peutGererTaches()) {
       <button type="button" class="kanban__create-btn" (click)="ouvrirCreationTache()">+ Créer une tâche</button>
     }
@@ -51,10 +115,12 @@
               [task]="task"
               [draggable]="true"
               [canManage]="peutGererTaches()"
+              [archivable]="true"
               (open)="openTask($event)"
               (dragStart)="onCardDragStart($event)"
               (edit)="ouvrirModificationTache(task)"
               (delete)="demanderSuppressionTache(task)"
+              (archive)="demanderArchivage(task)"
             />
           } @empty {
             <div class="kanban__empty-col">Aucune tâche.</div>
@@ -63,6 +129,7 @@
       </div>
     }
   </div>
+  }
 
   <app-task-detail-panel [taskId]="selectedTaskId()" (close)="closePanel()" (openTask)="openTask($event)" />
 
@@ -167,5 +234,14 @@
     [destructive]="true"
     (confirm)="confirmerSuppressionTache()"
     (cancel)="annulerSuppressionTache()"
+  />
+
+  <app-confirmation-dialog
+    [open]="tacheAArchiver() !== null"
+    title="Archiver la tâche"
+    [message]="'Archiver « ' + (tacheAArchiver()?.code ?? '') + ' — ' + (tacheAArchiver()?.titre ?? '') + ' » ? Elle quittera le Kanban et restera consultable dans les archives du projet.'"
+    confirmLabel="Archiver"
+    (confirm)="confirmerArchivage()"
+    (cancel)="annulerArchivage()"
   />
 </div>

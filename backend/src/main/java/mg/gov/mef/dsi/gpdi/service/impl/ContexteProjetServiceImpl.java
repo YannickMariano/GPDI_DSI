@@ -1,5 +1,6 @@
 package mg.gov.mef.dsi.gpdi.service.impl;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -15,6 +16,7 @@ import mg.gov.mef.dsi.gpdi.entity.Risque;
 import mg.gov.mef.dsi.gpdi.entity.Sprint;
 import mg.gov.mef.dsi.gpdi.entity.StatutJalon;
 import mg.gov.mef.dsi.gpdi.entity.StatutLivrable;
+import mg.gov.mef.dsi.gpdi.entity.StatutProjet;
 import mg.gov.mef.dsi.gpdi.entity.StatutRisque;
 import mg.gov.mef.dsi.gpdi.entity.StatutSprint;
 import mg.gov.mef.dsi.gpdi.entity.StatutTache;
@@ -71,6 +73,13 @@ public class ContexteProjetServiceImpl implements ContexteProjetService {
     /** Une tache dont l'echeance tombe dans ce delai (en jours) est deja a surveiller. */
     private static final int HORIZON_ECHEANCE_JOURS = 7;
 
+    private static final Set<StatutProjet> STATUTS_PROJET_ACTIFS =
+            EnumSet.of(StatutProjet.EN_PREPARATION, StatutProjet.EN_COURS, StatutProjet.SUSPENDU);
+    private static final int MAX_PROJETS_DETAILLES = 6;
+    private static final int MAX_TACHES_A_SURVEILLER_PORTEFEUILLE = 5;
+    private static final int MAX_JALONS_PORTEFEUILLE = 3;
+    private static final int MAX_RISQUES_PORTEFEUILLE = 5;
+
     private static final String FONCTION_RESPONSABLE = "RESPONSABLE_PROJET";
     private static final String FONCTION_CHEF_EQUIPE = "CHEF_EQUIPE";
     private static final String FONCTION_MEMBRE = "MEMBRE";
@@ -116,6 +125,97 @@ public class ContexteProjetServiceImpl implements ContexteProjetService {
                 .collect(Collectors.toList());
 
         return new ContexteProjetIa(racine, new HashSet<>(membres.keySet()), idsRisquesReevaluables, libellesRisquesConnus);
+    }
+
+    /**
+     * Plusieurs projets doivent tenir dans la meme fenetre de 8 192 jetons : seuls les projets actifs sont
+     * detailles (dans la limite de MAX_PROJETS_DETAILLES, en cours d'abord), et chaque detail est reduit
+     * a ce qui est ouvert ou inquietant. Les autres projets ne sont transmis que par leur fiche.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public JsonNode construirePortefeuille(List<Long> idsProjets) {
+        List<Projet> projets = projetRepository.findAllById(idsProjets).stream()
+                .sorted(Comparator.comparingInt((Projet projet) -> rangPortefeuille(projet.getStatut()))
+                        .thenComparing(Projet::getId))
+                .collect(Collectors.toList());
+
+        ArrayNode liste = objectMapper.createArrayNode();
+        int detailles = 0;
+        for (Projet projet : projets) {
+            ObjectNode complet = construire(projet.getId()).getContenu().deepCopy();
+            boolean actif = STATUTS_PROJET_ACTIFS.contains(projet.getStatut());
+            if (actif && detailles < MAX_PROJETS_DETAILLES) {
+                liste.add(condenser(complet));
+                detailles++;
+            } else {
+                ObjectNode fiche = objectMapper.createObjectNode();
+                fiche.set("projet", complet.get("projet"));
+                liste.add(fiche);
+            }
+        }
+
+        ObjectNode racine = objectMapper.createObjectNode();
+        racine.put("dateDuJour", LocalDate.now().toString());
+        racine.put("nombreProjets", projets.size());
+        racine.set("projets", liste);
+        return racine;
+    }
+
+    private int rangPortefeuille(StatutProjet statut) {
+        if (statut == StatutProjet.EN_COURS) {
+            return 0;
+        }
+        return STATUTS_PROJET_ACTIFS.contains(statut) ? 1 : 2;
+    }
+
+    private ObjectNode condenser(ObjectNode complet) {
+        ObjectNode noeud = objectMapper.createObjectNode();
+        noeud.set("projet", complet.get("projet"));
+        noeud.set("equipe", complet.get("equipe"));
+
+        ObjectNode taches = (ObjectNode) complet.get("taches");
+        taches.set("aSurveiller", premiers((ArrayNode) taches.get("aSurveiller"), MAX_TACHES_A_SURVEILLER_PORTEFEUILLE));
+        noeud.set("taches", taches);
+
+        ArrayNode sprints = objectMapper.createArrayNode();
+        for (JsonNode sprint : complet.get("sprints")) {
+            if (!StatutSprint.CLOTURER.name().equals(sprint.path("statut").asText())) {
+                ObjectNode copie = (ObjectNode) sprint;
+                copie.remove("burndown");
+                sprints.add(copie);
+            }
+        }
+        noeud.set("sprints", sprints);
+
+        ArrayNode jalons = objectMapper.createArrayNode();
+        for (JsonNode jalon : complet.get("jalons")) {
+            String statut = jalon.path("statut").asText();
+            if (jalons.size() < MAX_JALONS_PORTEFEUILLE
+                    && (StatutJalon.A_VENIR.name().equals(statut) || StatutJalon.EN_RETARD.name().equals(statut))) {
+                jalons.add(jalon);
+            }
+        }
+        noeud.set("jalonsOuverts", jalons);
+
+        ArrayNode risques = objectMapper.createArrayNode();
+        for (JsonNode risque : complet.get("risquesConnus")) {
+            String statut = risque.path("statut").asText();
+            if (risques.size() < MAX_RISQUES_PORTEFEUILLE
+                    && (StatutRisque.OUVERT.name().equals(statut) || StatutRisque.SOUS_CONTROLE.name().equals(statut))) {
+                risques.add(risque);
+            }
+        }
+        noeud.set("risquesActifs", risques);
+        return noeud;
+    }
+
+    private ArrayNode premiers(ArrayNode source, int limite) {
+        ArrayNode resultat = objectMapper.createArrayNode();
+        for (int i = 0; i < source.size() && i < limite; i++) {
+            resultat.add(source.get(i));
+        }
+        return resultat;
     }
 
     private ObjectNode decrireProjet(Projet projet, List<Tache> taches, LocalDate aujourdhui) {
