@@ -23,4 +23,11 @@ public class MessageAssistantResponse {
     private String fondement;
 
     private LocalDateTime dateCreation;
+
+    /** Action proposee par l'assistant global (a confirmer par l'utilisateur), absente pour une simple reponse. */
+    private ActionAssistantResponse action;
+
+    public MessageAssistantResponse(Long id, String question, String reponse, String fondement, LocalDateTime dateCreation) {
+        this(id, question, reponse, fondement, dateCreation, null);
+    }
 }

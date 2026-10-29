@@ -328,6 +328,24 @@ archivés réduits à leur fiche. Échange enregistré dans `ia_analyses` avec l
 `GET` — historique des échanges globaux de l'utilisateur connecté, du plus ancien au plus récent.
 `POST` (body `{ question }`, peut durer plusieurs minutes) — mêmes réponse et erreurs que l'assistant d'un projet.
 
+**Actions proposées** (`ActionAssistantService`, table `ia_actions_assistant`, script `init-lot16-actions-assistant-ia.sql`) :
+quand l'utilisateur demande de *faire* quelque chose, le modèle renseigne en plus un champ `action` (un seul type parmi
+`TypeActionAssistant` : création/modification/démarrage/suspension/reprise/clôture/archivage de projet ; création/
+modification/démarrage/clôture/suppression de sprint ; création/modification/atteinte/annulation/suppression de jalon ;
+création/modification/affectation/retrait/changement de statut/archivage/restauration/suppression de tâche), avec des
+désignations libres (titre de projet, code de tâche, nom de sprint, de jalon ou de personne). Le backend les résout parmi
+les projets dont l'utilisateur est responsable (personnes : responsable, chef d'équipe et membres actifs de l'équipe du
+projet) ; une désignation introuvable ou ambiguë, ou un champ obligatoire manquant, ne produit aucune action : la réponse
+devient la question de précision. **Rien n'est exécuté à ce stade** : la réponse contient `action: { id, type, libelle,
+details, irreversible, statut: "PROPOSEE" }` (aussi renvoyée par l'historique).
+- `POST /api/assistant/actions/{id}/confirmer` — exécute l'action via le service métier existant (`ProjetService`,
+  `SprintService`, `JalonService`, `TacheService` : mêmes règles, même matrice d'habilitations ; une modification part de
+  l'état courant relu à la confirmation) ; exige en plus le rôle Keycloak de la route équivalente (`403`,
+  `RoleActionAssistantManquantException`) → `statut: "APPLIQUEE"`, `resultat`, `idProjet`. Une erreur métier est renvoyée
+  telle quelle et l'action reste `PROPOSEE`.
+- `POST /api/assistant/actions/{id}/annuler` — `statut: "ANNULEE"`, rien n'est modifié.
+Erreurs : `404` action inconnue ou proposée à un autre utilisateur ; `409` action déjà confirmée ou annulée.
+
 ### Recommandations de pilotage — `/api/projets/{idProjet}/recommandations`
 
 Lecture ouverte au chef de projet du projet et, en lecture seule, au Directeur DSI (vue portefeuille) ;

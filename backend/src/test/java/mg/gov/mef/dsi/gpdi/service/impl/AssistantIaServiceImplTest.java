@@ -20,6 +20,12 @@ import mg.gov.mef.dsi.gpdi.repository.ProjetRepository;
 import mg.gov.mef.dsi.gpdi.repository.UtilisateurRepository;
 import mg.gov.mef.dsi.gpdi.security.UtilisateurCourantService;
 import mg.gov.mef.dsi.gpdi.service.ContexteProjetService;
+import mg.gov.mef.dsi.gpdi.service.ActionAssistantService;
+import mg.gov.mef.dsi.gpdi.repository.ActionAssistantRepository;
+import mg.gov.mef.dsi.gpdi.entity.ActionAssistant;
+import mg.gov.mef.dsi.gpdi.entity.TypeActionAssistant;
+import mg.gov.mef.dsi.gpdi.dto.response.ActionAssistantResponse;
+import mg.gov.mef.dsi.gpdi.exception.ActionAssistantImpossibleException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -67,6 +73,10 @@ class AssistantIaServiceImplTest {
     private UtilisateurCourantService utilisateurCourantService;
     @Mock
     private PlatformTransactionManager transactionManager;
+    @Mock
+    private ActionAssistantService actionAssistantService;
+    @Mock
+    private ActionAssistantRepository actionAssistantRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private AssistantIaServiceImpl service;
@@ -78,7 +88,8 @@ class AssistantIaServiceImplTest {
     @BeforeEach
     void setUp() throws Exception {
         service = new AssistantIaServiceImpl(projetRepository, iaAnalyseRepository, utilisateurRepository,
-                contexteProjetService, ollamaClient, utilisateurCourantService, objectMapper, new TransactionTemplate(transactionManager));
+                contexteProjetService, ollamaClient, utilisateurCourantService, objectMapper, new TransactionTemplate(transactionManager),
+                actionAssistantService, actionAssistantRepository);
 
         responsable = new Utilisateur();
         responsable.setId(ID_RESPONSABLE);
@@ -198,6 +209,49 @@ class AssistantIaServiceImplTest {
         assertThat(captor.getValue().getProjet()).isNull();
         assertThat(captor.getValue().getPortee()).isEqualTo(PorteeAnalyseIa.GLOBAL);
         assertThat(captor.getValue().getDemandeur()).isSameAs(responsable);
+    }
+
+    @Test
+    void poserQuestionGlobale_actionDemandee_enregistreLActionProposeeSansLExecuter() throws Exception {
+        responsable.setRole(role("chef_projet"));
+        when(projetRepository.findByResponsableIdOrderByIdAsc(ID_RESPONSABLE)).thenReturn(Collections.singletonList(projet));
+        when(contexteProjetService.construirePortefeuille(Collections.singletonList(ID_PROJET)))
+                .thenReturn(objectMapper.readTree("{\"nombreProjets\":1}"));
+        when(ollamaClient.genererJson(anyString(), anyString(), anyMap()))
+                .thenReturn("{\"reponse\":\"Je vous propose de créer la tâche. Confirmez ci-dessous.\","
+                        + "\"action\":{\"type\":\"CREER_TACHE\",\"titre\":\"Rédiger le cahier de recette\"}}");
+        ActionAssistant preparee = new ActionAssistant();
+        preparee.setType(TypeActionAssistant.CREER_TACHE);
+        when(actionAssistantService.preparer(any(JsonNode.class), any(Utilisateur.class))).thenReturn(preparee);
+        when(actionAssistantRepository.save(preparee)).thenReturn(preparee);
+        ActionAssistantResponse reponseAction = new ActionAssistantResponse();
+        reponseAction.setLibelle("Créer la tâche « Rédiger le cahier de recette »");
+        when(actionAssistantService.versResponse(preparee)).thenReturn(reponseAction);
+
+        MessageAssistantResponse reponse = service.poserQuestionGlobale("Crée une tâche Rédiger le cahier de recette", ID_RESPONSABLE);
+
+        assertThat(reponse.getAction()).isSameAs(reponseAction);
+        assertThat(preparee.getAnalyse()).isNotNull();
+        assertThat(preparee.getDemandeur()).isSameAs(responsable);
+        verify(actionAssistantService, never()).confirmer(any());
+    }
+
+    @Test
+    void poserQuestionGlobale_actionImpossibleAPreparer_repondParLaQuestionDePrecisionSansAction() throws Exception {
+        responsable.setRole(role("chef_projet"));
+        when(projetRepository.findByResponsableIdOrderByIdAsc(ID_RESPONSABLE)).thenReturn(Collections.singletonList(projet));
+        when(contexteProjetService.construirePortefeuille(Collections.singletonList(ID_PROJET)))
+                .thenReturn(objectMapper.readTree("{\"nombreProjets\":1}"));
+        when(ollamaClient.genererJson(anyString(), anyString(), anyMap()))
+                .thenReturn("{\"reponse\":\"Je vous propose d'affecter Koto.\",\"action\":{\"type\":\"AFFECTER_TACHE\",\"tache\":\"T-9\"}}");
+        when(actionAssistantService.preparer(any(JsonNode.class), any(Utilisateur.class)))
+                .thenThrow(new ActionAssistantImpossibleException("Plusieurs éléments correspondent à « Koto ». Lequel voulez-vous ?"));
+
+        MessageAssistantResponse reponse = service.poserQuestionGlobale("Affecte Koto à T-9", ID_RESPONSABLE);
+
+        assertThat(reponse.getReponse()).isEqualTo("Plusieurs éléments correspondent à « Koto ». Lequel voulez-vous ?");
+        assertThat(reponse.getAction()).isNull();
+        verify(actionAssistantRepository, never()).save(any(ActionAssistant.class));
     }
 
     @Test

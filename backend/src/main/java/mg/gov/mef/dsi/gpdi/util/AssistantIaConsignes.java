@@ -42,7 +42,32 @@ public final class AssistantIaConsignes {
                     + "- reponse : la réponse à la question, claire et directement utile pour un chef de projet, en quelques phrases. "
                     + "Cite les titres de projet, codes de tâche, noms de personnes ou dates utiles, jamais un identifiant numérique brut.\n"
                     + "- fondement (optionnel) : en quelques mots, sur quelles données de la réponse tu t'appuies (par exemple "
-                    + "« 3 projets en cours, 5 tâches en retard »). Omets ce champ si la réponse est directe et n'en a pas besoin.";
+                    + "« 3 projets en cours, 5 tâches en retard »). Omets ce champ si la réponse est directe et n'en a pas besoin.\n"
+                    + "\n"
+                    + "Actions :\n"
+                    + "- Si le chef de projet te demande de FAIRE quelque chose (créer, modifier, affecter, retirer, changer de "
+                    + "statut, démarrer, suspendre, reprendre, clôturer, marquer un jalon atteint, annuler, archiver, restaurer, "
+                    + "supprimer), remplis le champ action avec UNE seule action. Tu n'exécutes rien toi-même : l'action ne sera "
+                    + "faite qu'après sa confirmation. Rédige alors reponse comme une proposition courte, par exemple « Je vous "
+                    + "propose de créer la tâche … Confirmez ci-dessous. » N'écris jamais que c'est fait.\n"
+                    + "- Pour une simple question, n'ajoute pas de champ action.\n"
+                    + "- Si plusieurs actions sont demandées, propose la première et dis qu'il faudra redemander les suivantes.\n"
+                    + "- action.type, parmi : CREER_PROJET, MODIFIER_PROJET, DEMARRER_PROJET, SUSPENDRE_PROJET, REPRENDRE_PROJET, "
+                    + "CLOTURER_PROJET, ARCHIVER_PROJET, CREER_SPRINT, MODIFIER_SPRINT, DEMARRER_SPRINT, CLOTURER_SPRINT, "
+                    + "SUPPRIMER_SPRINT, CREER_JALON, MODIFIER_JALON, ATTEINDRE_JALON, ANNULER_JALON, SUPPRIMER_JALON, CREER_TACHE, "
+                    + "MODIFIER_TACHE, AFFECTER_TACHE, DESAFFECTER_TACHE, CHANGER_STATUT_TACHE, ARCHIVER_TACHE, RESTAURER_TACHE, "
+                    + "SUPPRIMER_TACHE.\n"
+                    + "- Désigne le projet par son titre (champ projet), la tâche par son code comme T-12 (champ tache), le sprint "
+                    + "par son nom (champ sprint, ou « backlog » pour retirer une tâche de son sprint), le jalon par son titre "
+                    + "(champ jalon), les personnes par leur nom tel qu'il apparaît dans l'équipe (champ personnes). Reprends les "
+                    + "désignations du chef de projet si elles ne figurent pas dans les données.\n"
+                    + "- Pour une création ou une modification, mets les nouvelles valeurs dans titre (projet, tâche, jalon), nom "
+                    + "(sprint), description, objectif, priorite (CRITIQUE, HAUTE, NORMALE, BASSE), statut (A_FAIRE, EN_COURS, "
+                    + "EN_TEST, BLOQUEE, TERMINEE, REPORTEE), dateDebut, dateFin, dateEcheance, heuresEstimees, capaciteHeures, "
+                    + "equipe. Dates au format AAAA-MM-JJ : calcule les dates relatives (« demain », « vendredi prochain », « dans "
+                    + "2 semaines ») à partir de dateDuJour.\n"
+                    + "- Ne remplis que les champs que le chef de projet a donnés ou qui découlent directement de sa demande : "
+                    + "n'invente aucune valeur.";
 
     private AssistantIaConsignes() {
     }
@@ -63,6 +88,46 @@ public final class AssistantIaConsignes {
     public static String consigneUtilisateurPortefeuille(JsonNode contextePortefeuille, String question) {
         return "Données de tous les projets du chef de projet (JSON) :\n" + contextePortefeuille.toString()
                 + "\n\nQuestion du chef de projet :\n" + question;
+    }
+
+    /** Schema de la reponse globale : celui de schemaReponse(), plus une action facultative a proposer. */
+    public static Map<String, Object> schemaReponsePortefeuille() {
+        Map<String, Object> proprietesAction = new LinkedHashMap<>();
+        Map<String, Object> type = new LinkedHashMap<>();
+        type.put("type", "string");
+        type.put("enum", Arrays.asList("CREER_PROJET", "MODIFIER_PROJET", "DEMARRER_PROJET", "SUSPENDRE_PROJET",
+                "REPRENDRE_PROJET", "CLOTURER_PROJET", "ARCHIVER_PROJET", "CREER_SPRINT", "MODIFIER_SPRINT", "DEMARRER_SPRINT",
+                "CLOTURER_SPRINT", "SUPPRIMER_SPRINT", "CREER_JALON", "MODIFIER_JALON", "ATTEINDRE_JALON", "ANNULER_JALON",
+                "SUPPRIMER_JALON", "CREER_TACHE", "MODIFIER_TACHE", "AFFECTER_TACHE", "DESAFFECTER_TACHE",
+                "CHANGER_STATUT_TACHE", "ARCHIVER_TACHE", "RESTAURER_TACHE", "SUPPRIMER_TACHE"));
+        proprietesAction.put("type", type);
+        for (String champ : Arrays.asList("projet", "tache", "sprint", "jalon", "titre", "nom", "description", "objectif",
+                "priorite", "statut", "dateDebut", "dateFin", "dateEcheance", "equipe")) {
+            proprietesAction.put(champ, typeSimple("string"));
+        }
+        proprietesAction.put("heuresEstimees", typeSimple("number"));
+        proprietesAction.put("capaciteHeures", typeSimple("number"));
+        Map<String, Object> personnes = new LinkedHashMap<>();
+        personnes.put("type", "array");
+        personnes.put("items", typeSimple("string"));
+        proprietesAction.put("personnes", personnes);
+
+        Map<String, Object> action = new LinkedHashMap<>();
+        action.put("type", "object");
+        action.put("properties", proprietesAction);
+        action.put("required", Arrays.asList("type"));
+
+        Map<String, Object> racine = schemaReponse();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> proprietes = (Map<String, Object>) racine.get("properties");
+        proprietes.put("action", action);
+        return racine;
+    }
+
+    private static Map<String, Object> typeSimple(String type) {
+        Map<String, Object> noeud = new LinkedHashMap<>();
+        noeud.put("type", type);
+        return noeud;
     }
 
     public static Map<String, Object> schemaReponse() {

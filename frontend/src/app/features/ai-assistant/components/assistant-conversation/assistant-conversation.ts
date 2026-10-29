@@ -94,6 +94,26 @@ export class AssistantConversation {
     void this.envoyerPrompt(this.saisie());
   }
 
+  actionEnTraitement(idAction: string): boolean {
+    return this.assistantIaService.estActionEnTraitement(idAction);
+  }
+
+  async confirmerAction(idAction: string): Promise<void> {
+    try {
+      await this.assistantIaService.confirmerAction(idAction);
+    } catch {
+      // Message d'erreur (règle métier, droit manquant…) déjà affiché par l'intercepteur HTTP global.
+    }
+  }
+
+  async annulerAction(idAction: string): Promise<void> {
+    try {
+      await this.assistantIaService.annulerAction(idAction);
+    } catch {
+      // Message d'erreur déjà affiché par l'intercepteur HTTP global.
+    }
+  }
+
   /**
    * Les appels IA n'affichent pas le toast global : saturation/indisponibilité du modèle (502/503/504) →
    * message convivial dans le fil ; toute autre erreur → toast avec le message du backend, comme ailleurs.
