@@ -78,6 +78,11 @@ frontend/.vscode/*
 .gemini/
 CLAUDE.md
 frontend/.github/
+
+# ---------- Scripts locaux ----------
+get-token.ps1
+run.ps1
+del59.svg
 .github/modernize/
 backend/.github/modernize/
 
