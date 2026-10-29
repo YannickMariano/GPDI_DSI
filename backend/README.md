@@ -306,6 +306,39 @@ dateCreation }]`.
 `{ id, question, reponse, fondement, dateCreation }` (`fondement` : justification de la réponse par le
 modèle). Erreurs : `404` projet introuvable ; `503` Ollama indisponible ; `502` réponse de l'IA inexploitable.
 
+<<<<<<< HEAD
+=======
+### Assistant IA global — `/api/assistant/messages`
+
+Même principe que l'assistant d'un projet, mais sur **tous les projets dont l'utilisateur connecté est responsable**
+(sans choix de projet : onglet Assistant IA et bulle de discussion du frontend). Rôle Keycloak `GESTIONNAIRE_PROJET` ;
+le rôle métier `chef_projet` est en plus vérifié dans `AssistantIaServiceImpl` (`403`,
+`AccesAssistantIaGlobalRefuseException`, sinon). Le contexte envoyé au modèle est une version condensée du contexte
+projet (`ContexteProjetService.construirePortefeuille`) : projets actifs détaillés (6 au plus), projets clôturés ou
+archivés réduits à leur fiche. Échange enregistré dans `ia_analyses` avec la portée `GLOBAL` et sans projet
+(script `init-lot14-assistant-ia-global.sql`).
+`GET` — historique des échanges globaux de l'utilisateur connecté, du plus ancien au plus récent.
+`POST` (body `{ question }`, peut durer plusieurs minutes) — mêmes réponse et erreurs que l'assistant d'un projet.
+
+**Actions proposées** (`ActionAssistantService`, table `ia_actions_assistant`, script `init-lot16-actions-assistant-ia.sql`) :
+quand l'utilisateur demande de *faire* quelque chose, le modèle renseigne en plus un champ `action` (un seul type parmi
+`TypeActionAssistant` : création/modification/démarrage/suspension/reprise/clôture/archivage de projet ; création/
+modification/démarrage/clôture/suppression de sprint ; création/modification/atteinte/annulation/suppression de jalon ;
+création/modification/affectation/retrait/changement de statut/archivage/restauration/suppression de tâche), avec des
+désignations libres (titre de projet, code de tâche, nom de sprint, de jalon ou de personne). Le backend les résout parmi
+les projets dont l'utilisateur est responsable (personnes : responsable, chef d'équipe et membres actifs de l'équipe du
+projet) ; une désignation introuvable ou ambiguë, ou un champ obligatoire manquant, ne produit aucune action : la réponse
+devient la question de précision. **Rien n'est exécuté à ce stade** : la réponse contient `action: { id, type, libelle,
+details, irreversible, statut: "PROPOSEE" }` (aussi renvoyée par l'historique).
+- `POST /api/assistant/actions/{id}/confirmer` — exécute l'action via le service métier existant (`ProjetService`,
+  `SprintService`, `JalonService`, `TacheService` : mêmes règles, même matrice d'habilitations ; une modification part de
+  l'état courant relu à la confirmation) ; exige en plus le rôle Keycloak de la route équivalente (`403`,
+  `RoleActionAssistantManquantException`) → `statut: "APPLIQUEE"`, `resultat`, `idProjet`. Une erreur métier est renvoyée
+  telle quelle et l'action reste `PROPOSEE`.
+- `POST /api/assistant/actions/{id}/annuler` — `statut: "ANNULEE"`, rien n'est modifié.
+Erreurs : `404` action inconnue ou proposée à un autre utilisateur ; `409` action déjà confirmée ou annulée.
+
+>>>>>>> nicky
 ### Recommandations de pilotage — `/api/projets/{idProjet}/recommandations`
 
 Lecture ouverte au chef de projet du projet et, en lecture seule, au Directeur DSI (vue portefeuille) ;

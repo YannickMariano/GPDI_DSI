@@ -3,7 +3,22 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { environment } from '@environments/environment';
 import { SANS_TOAST_ERREUR } from '@core/interceptors/error.interceptor';
-import { ChatMessage } from '@core/models/ai-recommendation.model';
+import { ActionAssistant, ChatMessage, StatutActionAssistant } from '@core/models/ai-recommendation.model';
+import { ProjectsService } from '@core/services/projects.service';
+import { TasksService } from '@core/services/tasks.service';
+import { SprintsService } from '@core/services/sprints.service';
+import { MilestonesService } from '@core/services/milestones.service';
+
+interface ActionAssistantResponse {
+  id: number;
+  type: string;
+  libelle: string;
+  details: string[] | null;
+  irreversible: boolean;
+  statut: StatutActionAssistant;
+  resultat: string | null;
+  idProjet: number | null;
+}
 
 interface MessageAssistantResponse {
   id: number;
@@ -11,6 +26,21 @@ interface MessageAssistantResponse {
   reponse: string;
   fondement: string | null;
   dateCreation: string;
+  action?: ActionAssistantResponse | null;
+}
+
+function versAction(dto: ActionAssistantResponse | null | undefined): ActionAssistant | undefined {
+  if (!dto) return undefined;
+  return {
+    id: String(dto.id),
+    type: dto.type,
+    libelle: dto.libelle,
+    details: dto.details ?? [],
+    irreversible: dto.irreversible,
+    statut: dto.statut,
+    resultat: dto.resultat ?? undefined,
+    idProjet: dto.idProjet != null ? String(dto.idProjet) : undefined,
+  };
 }
 
 interface MessageProjet {
@@ -21,7 +51,10 @@ interface MessageProjet {
 function versMessages(dto: MessageAssistantResponse, projectId: string): MessageProjet[] {
   return [
     { projectId, message: { id: `${dto.id}-q`, isUser: true, texte: dto.question, quand: dto.dateCreation } },
-    { projectId, message: { id: `${dto.id}-r`, isUser: false, texte: dto.reponse, source: dto.fondement ?? undefined, quand: dto.dateCreation } },
+    {
+      projectId,
+      message: { id: `${dto.id}-r`, isUser: false, texte: dto.reponse, source: dto.fondement ?? undefined, quand: dto.dateCreation, action: versAction(dto.action) },
+    },
   ];
 }
 
@@ -82,10 +115,53 @@ export class AssistantIaService {
       );
       this._messagesGlobaux.update((list) => [
         ...list,
-        { id: `${dto.id}-r`, isUser: false, texte: dto.reponse, source: dto.fondement ?? undefined, quand: dto.dateCreation },
+        { id: `${dto.id}-r`, isUser: false, texte: dto.reponse, source: dto.fondement ?? undefined, quand: dto.dateCreation, action: versAction(dto.action) },
       ]);
     } finally {
       this._debutGlobal.set(null);
+    }
+  }
+
+  // --- Actions proposées par l'assistant : exécutées seulement après confirmation explicite ---
+
+  private readonly projectsService = inject(ProjectsService);
+  private readonly tasksService = inject(TasksService);
+  private readonly sprintsService = inject(SprintsService);
+  private readonly milestonesService = inject(MilestonesService);
+  private readonly _actionsEnTraitement = signal<ReadonlySet<string>>(new Set());
+
+  estActionEnTraitement(idAction: string): boolean {
+    return this._actionsEnTraitement().has(idAction);
+  }
+
+  /** Exécute l'action (erreurs métier affichées par l'intercepteur global), puis recharge les données concernées. */
+  async confirmerAction(idAction: string): Promise<void> {
+    const action = await this.traiterAction(idAction, 'confirmer');
+    this.projectsService.reload();
+    if (action?.idProjet) {
+      this.tasksService.reload(action.idProjet);
+      this.sprintsService.reload(action.idProjet);
+      this.milestonesService.reload(action.idProjet);
+    }
+  }
+
+  async annulerAction(idAction: string): Promise<void> {
+    await this.traiterAction(idAction, 'annuler');
+  }
+
+  private async traiterAction(idAction: string, operation: 'confirmer' | 'annuler'): Promise<ActionAssistant | undefined> {
+    this._actionsEnTraitement.update((courant) => new Set(courant).add(idAction));
+    try {
+      const dto = await firstValueFrom(this.http.post<ActionAssistantResponse>(`${environment.apiUrl}/assistant/actions/${idAction}/${operation}`, {}));
+      const action = versAction(dto);
+      this._messagesGlobaux.update((list) => list.map((m) => (m.action?.id === idAction ? { ...m, action } : m)));
+      return action;
+    } finally {
+      this._actionsEnTraitement.update((courant) => {
+        const copie = new Set(courant);
+        copie.delete(idAction);
+        return copie;
+      });
     }
   }
 

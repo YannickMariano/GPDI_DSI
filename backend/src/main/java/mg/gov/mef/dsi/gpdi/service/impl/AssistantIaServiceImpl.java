@@ -4,7 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import mg.gov.mef.dsi.gpdi.client.ModeleIaClient;
+import mg.gov.mef.dsi.gpdi.dto.response.ActionAssistantResponse;
 import mg.gov.mef.dsi.gpdi.dto.response.ContexteProjetIa;
+import mg.gov.mef.dsi.gpdi.entity.ActionAssistant;
+import mg.gov.mef.dsi.gpdi.exception.ActionAssistantImpossibleException;
+import mg.gov.mef.dsi.gpdi.repository.ActionAssistantRepository;
+import mg.gov.mef.dsi.gpdi.service.ActionAssistantService;
 import mg.gov.mef.dsi.gpdi.dto.response.MessageAssistantResponse;
 import mg.gov.mef.dsi.gpdi.entity.IaAnalyse;
 import mg.gov.mef.dsi.gpdi.entity.PorteeAnalyseIa;
@@ -30,6 +35,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +58,8 @@ public class AssistantIaServiceImpl implements AssistantIaService {
     private final UtilisateurCourantService utilisateurCourantService;
     private final ObjectMapper objectMapper;
     private final TransactionTemplate transactionTemplate;
+    private final ActionAssistantService actionAssistantService;
+    private final ActionAssistantRepository actionAssistantRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -85,9 +93,12 @@ public class AssistantIaServiceImpl implements AssistantIaService {
     @Transactional(readOnly = true)
     public List<MessageAssistantResponse> historiqueGlobal() {
         Utilisateur chefDeProjet = obtenirChefDeProjetCourant();
-        return iaAnalyseRepository.findByDemandeurIdAndPorteeOrderByDateCreationAsc(chefDeProjet.getId(), PorteeAnalyseIa.GLOBAL)
-                .stream()
-                .map(analyse -> new MessageAssistantResponse(analyse.getId(), analyse.getQuestion(), analyse.getReponse(), null, analyse.getDateCreation()))
+        List<IaAnalyse> analyses = iaAnalyseRepository.findByDemandeurIdAndPorteeOrderByDateCreationAsc(chefDeProjet.getId(), PorteeAnalyseIa.GLOBAL);
+        Map<Long, ActionAssistantResponse> actions = actionAssistantService.parAnalyse(
+                analyses.stream().map(IaAnalyse::getId).collect(Collectors.toList()));
+        return analyses.stream()
+                .map(analyse -> new MessageAssistantResponse(analyse.getId(), analyse.getQuestion(), analyse.getReponse(), null,
+                        analyse.getDateCreation(), actions.get(analyse.getId())))
                 .collect(Collectors.toList());
     }
 
@@ -100,20 +111,32 @@ public class AssistantIaServiceImpl implements AssistantIaService {
 
         JsonNode contexte = contexteProjetService.construirePortefeuille(idsProjets);
         String reponseBrute = ollamaClient.genererJson(AssistantIaConsignes.consigneSystemePortefeuille(),
-                AssistantIaConsignes.consigneUtilisateurPortefeuille(contexte, question), AssistantIaConsignes.schemaReponse());
+                AssistantIaConsignes.consigneUtilisateurPortefeuille(contexte, question), AssistantIaConsignes.schemaReponsePortefeuille());
         JsonNode noeud = lire(reponseBrute);
-        String reponseTexte = texte(noeud.path("reponse"));
-        if (reponseTexte == null) {
+        String reponseModele = texte(noeud.path("reponse"));
+        if (reponseModele == null) {
             throw new ReponseIaInvalideException("L'assistant IA n'a pas fourni de réponse exploitable.");
         }
         String fondement = texte(noeud.path("fondement"));
 
+        // Preparee hors transaction : une designation introuvable ou ambigue n'est pas une erreur, l'assistant
+        // demande simplement a l'utilisateur de preciser (rien n'est execute avant confirmation).
+        ActionAssistant action = null;
+        String reponseTexte = reponseModele;
+        try {
+            action = actionAssistantService.preparer(noeud.path("action"), chefDeProjet);
+        } catch (ActionAssistantImpossibleException e) {
+            reponseTexte = e.getMessage();
+        }
+
+        ActionAssistant actionPreparee = action;
+        String reponseFinale = reponseTexte;
         return transactionTemplate.execute(
-                statut -> enregistrerGlobal(idDemandeur, question, reponseTexte, fondement, contexte));
+                statut -> enregistrerGlobal(idDemandeur, question, reponseFinale, fondement, contexte, actionPreparee));
     }
 
     private MessageAssistantResponse enregistrerGlobal(Long idDemandeur, String question, String reponseTexte,
-                                                       String fondement, JsonNode contenuContexte) {
+                                                       String fondement, JsonNode contenuContexte, ActionAssistant action) {
         Utilisateur demandeur = utilisateurRepository.findById(idDemandeur).orElse(null);
 
         IaAnalyse analyse = new IaAnalyse();
@@ -127,7 +150,16 @@ public class AssistantIaServiceImpl implements AssistantIaService {
         IaAnalyse enregistree = iaAnalyseRepository.save(analyse);
 
         log.info("Analyse {} : question globale posee a l'assistant IA par l'utilisateur {}", enregistree.getId(), idDemandeur);
-        return new MessageAssistantResponse(enregistree.getId(), enregistree.getQuestion(), enregistree.getReponse(), fondement, enregistree.getDateCreation());
+        MessageAssistantResponse reponse = new MessageAssistantResponse(enregistree.getId(), enregistree.getQuestion(),
+                enregistree.getReponse(), fondement, enregistree.getDateCreation());
+        if (action != null && demandeur != null) {
+            action.setAnalyse(enregistree);
+            action.setDemandeur(demandeur);
+            ActionAssistant proposee = actionAssistantRepository.save(action);
+            log.info("Action {} ({}) proposee par l'assistant IA, en attente de confirmation", proposee.getId(), proposee.getType());
+            reponse.setAction(actionAssistantService.versResponse(proposee));
+        }
+        return reponse;
     }
 
     private Utilisateur obtenirChefDeProjetCourant() {

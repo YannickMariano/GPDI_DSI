@@ -262,6 +262,39 @@ public class GlobalExceptionHandler {
                         .body(new ErreurResponse(exception.getMessage()));
         }
 
+<<<<<<< HEAD
+=======
+        @ExceptionHandler(ActionAssistantImpossibleException.class)
+        public ResponseEntity<ErreurResponse> gererActionAssistantImpossible(ActionAssistantImpossibleException exception) {
+                return ResponseEntity.badRequest()
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
+        @ExceptionHandler(ActionAssistantIntrouvableException.class)
+        public ResponseEntity<ErreurResponse> gererActionAssistantIntrouvable(ActionAssistantIntrouvableException exception) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
+        @ExceptionHandler(StatutActionAssistantInvalideException.class)
+        public ResponseEntity<ErreurResponse> gererStatutActionAssistantInvalide(StatutActionAssistantInvalideException exception) {
+                return ResponseEntity.status(HttpStatus.CONFLICT)
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
+        @ExceptionHandler(RoleActionAssistantManquantException.class)
+        public ResponseEntity<ErreurResponse> gererRoleActionAssistantManquant(RoleActionAssistantManquantException exception) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
+        @ExceptionHandler(AccesAssistantIaGlobalRefuseException.class)
+        public ResponseEntity<ErreurResponse> gererAccesAssistantIaGlobalRefuse(AccesAssistantIaGlobalRefuseException exception) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(new ErreurResponse(exception.getMessage()));
+        }
+
+>>>>>>> nicky
         @ExceptionHandler(AccesProjetRefuseException.class)
         public ResponseEntity<ErreurResponse> gererAccesProjetRefuse(AccesProjetRefuseException exception) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)

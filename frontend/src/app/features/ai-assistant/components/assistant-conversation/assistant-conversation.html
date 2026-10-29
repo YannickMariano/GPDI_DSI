@@ -6,10 +6,41 @@
         @if (m.source) {
           <span class="ai-chat__source">{{ m.source }}</span>
         }
+        @if (m.action; as action) {
+          <div class="ai-action" [class.ai-action--irreversible]="action.irreversible && action.statut === 'PROPOSEE'" role="group" [attr.aria-label]="'Action proposée : ' + action.libelle">
+            <div class="ai-action__libelle">{{ action.libelle }}</div>
+            @if (action.details.length > 0) {
+              <ul class="ai-action__details">
+                @for (ligne of action.details; track $index) {
+                  <li>{{ ligne }}</li>
+                }
+              </ul>
+            }
+            @switch (action.statut) {
+              @case ('PROPOSEE') {
+                <div class="ai-action__buttons">
+                  <button type="button" class="ai-action__confirm" [class.ai-action__confirm--danger]="action.irreversible" [disabled]="actionEnTraitement(action.id)" (click)="confirmerAction(action.id)">
+                    {{ actionEnTraitement(action.id) ? 'Exécution…' : action.irreversible ? 'Confirmer définitivement' : 'Confirmer' }}
+                  </button>
+                  <button type="button" class="ai-action__cancel" [disabled]="actionEnTraitement(action.id)" (click)="annulerAction(action.id)">Annuler</button>
+                </div>
+              }
+              @case ('APPLIQUEE') {
+                <div class="ai-action__etat ai-action__etat--ok" role="status">✓ {{ action.resultat ?? 'Action effectuée.' }}</div>
+              }
+              @case ('ANNULEE') {
+                <div class="ai-action__etat" role="status">Action annulée : rien n'a été modifié.</div>
+              }
+            }
+          </div>
+        }
       </div>
     } @empty {
       @if (!enCours()) {
-        <p class="ai-chat__intro">Posez une question sur l'ensemble de vos projets, ou sur un projet en le nommant.</p>
+        <p class="ai-chat__intro">
+          Posez une question sur vos projets, ou demandez une action (créer une tâche, affecter une personne, démarrer un sprint…) :
+          rien n'est fait sans votre confirmation.
+        </p>
       }
     }
     @if (enCours()) {
